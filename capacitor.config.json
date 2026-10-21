@@ -1,0 +1,9 @@
+{
+  "appId": "com.laxmienterprises.erp",
+  "appName": "Laxmi Enterprises ERP",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}
