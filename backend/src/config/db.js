@@ -71,9 +71,13 @@ export const connectDB = async () => {
     // 3. Dynamically import models to ensure all models & columns are registered
     await import("../models/index.js");
 
-    // 4. Auto-alter tables: dynamically updates existing tables with new columns, types, or indexes
-    await sequelize.sync({ alter: true });
-    console.log("⚡ Auto-Sync Complete: Database schema & columns automatically updated in MySQL.");
+    // 4. Schema Sync: Ensures all tables and relations exist in the database
+    try {
+      await sequelize.sync();
+      console.log("⚡ Auto-Sync Complete: Database tables ready in MySQL/TiDB.");
+    } catch (syncErr) {
+      console.warn("⚠️ Sync notice:", syncErr.message);
+    }
 
     return sequelize;
   } catch (error) {

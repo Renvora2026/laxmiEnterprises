@@ -12,7 +12,7 @@ const resetToCleanDatabase = async () => {
   try {
     console.log("🔌 Connecting to MySQL database...");
     await sequelize.authenticate();
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
 
     // 1. Clear all dummy records
     await Promise.all([

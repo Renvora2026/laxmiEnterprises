@@ -1,6 +1,16 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) return "http://localhost:5000/api/v1";
+  const clean = envUrl.trim().replace(/\/+$/, "");
+  if (clean.endsWith("/api/v1") || clean.endsWith("/api")) {
+    return clean;
+  }
+  return `${clean}/api/v1`;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -46,7 +56,10 @@ apiClient.interceptors.response.use(
 // ERP API Modules
 export const erpApi = {
   // Health Check
-  checkHealth: () => axios.get("http://localhost:5000/api/health"),
+  checkHealth: () => {
+    const rootUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+    return axios.get(`${rootUrl}/api/health`);
+  },
 
   // Master Synchronization (MySQL Database <-> Frontend)
   getAllData: () => apiClient.get("/sync/all"),
