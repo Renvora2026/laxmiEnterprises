@@ -4,59 +4,64 @@ Comprehensive Business Management & ERP Portal for **Laxmi Enterprises** (Indust
 
 ---
 
-## 📑 System Documentation & Developer Specifications
+## 📑 Architecture Overview
 
-For the complete 24-section developer checklist, financial calculation rules, database models, and handover requirements based on the official specification, see:
-
-👉 **[APPLICATION_DEVELOPMENT_REQUIREMENTS.md](APPLICATION_DEVELOPMENT_REQUIREMENTS.md)**
-
----
-
-## 🚀 Quick Start
-
-1. Ensure **Node.js (LTS version 18+)** is installed.
-2. Clone or open this folder in your terminal / IDE:
-   ```bash
-   cd laxmi-enterprises-frontend
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Start the Vite local development server:
-   ```bash
-   npm run dev
-   ```
-5. Open `http://localhost:5173/` in your browser.
+1. **Frontend (`/`):** React 19, Vite 6, Recharts, jsPDF, Lucide Icons, Vanilla CSS Design System.
+2. **Backend (`/backend`):** Node.js, Express, Sequelize ORM, MySQL (Hostinger Business Plan Ready & Local MySQL).
+3. **Mobile App (`/laxmi_enterprises_mobile`):** Flutter 3 Native WebApp with branded splash, offline recovery, pull-to-refresh, and Android back navigation.
 
 ---
 
-## 🛠️ Build & Verification
+## 🚀 Quick Start Guide
 
-To verify or generate web production bundles:
+### 1. Start Frontend Web Server
 ```bash
-npm run build
+# Install packages if not already installed
+npm install
+
+# Run Vite development server (http://localhost:5173)
+npm run dev
+```
+
+### 2. Start Backend API Server
+```bash
+# From project root:
+npm run server
+
+# Or directly from backend:
+cd backend
+npm run dev
+```
+- API Base: `http://localhost:5000/api/v1`
+- Health Check: `http://localhost:5000/api/health`
+
+### 3. Database Schema Auto-Sync & Seeding (MySQL)
+Configure your credentials in `backend/.env` (works with local MySQL or Hostinger remote MySQL).
+```bash
+cd backend
+# Synchronize models and tables:
+npm run db:sync
+
+# Seed demo records and admin account:
+npm run seed
 ```
 
 ---
 
-## 📱 Android APK Build
+## 📱 Mobile App (Flutter)
 
-The project is configured with Capacitor to generate Android APKs:
+The mobile application is powered by Flutter in [`laxmi_enterprises_mobile/`](laxmi_enterprises_mobile):
 
-- **Ready-to-Install APK File:** [`Laxmi-Enterprises-ERP.apk`](Laxmi-Enterprises-ERP.apk) (in project root)
-- **Direct Gradle output:** [`android/app/build/outputs/apk/debug/app-debug.apk`](android/app/build/outputs/apk/debug/app-debug.apk)
-
-### Rebuilding the Android APK:
+### Run Mobile App:
 ```bash
-# Build web assets, sync with Capacitor, and compile debug APK
-npm run build:apk
+npm run mobile:run
 ```
 
-### Open in Android Studio:
+### Build Android APK:
 ```bash
-npm run cap:open
+npm run mobile:build
 ```
+*(The compiled APK will be generated at: `laxmi_enterprises_mobile/build/app/outputs/flutter-apk/app-release.apk`)*
 
 ---
 
@@ -74,5 +79,4 @@ npm run cap:open
 
 ---
 
-*Laxmi Enterprises ERP • Built with React 19, Vite, Recharts & jsPDF*
-
+*Laxmi Enterprises ERP • React 19 • Express • MySQL • Flutter*

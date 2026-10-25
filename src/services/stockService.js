@@ -15,14 +15,25 @@
 export function calculateProductStock(product = {}, inventoryItem = null) {
   const openingStock = Math.max(0, Number(product.openingStock) || 0);
 
-  // Inward received stock: prioritize product.inwardStock, fallback to inventoryItem.in, then product.stock
-  let inwardStock = Number(product.inwardStock);
-  if (isNaN(inwardStock) || inwardStock === undefined) {
-    if (inventoryItem && !isNaN(Number(inventoryItem.in))) {
-      inwardStock = Number(inventoryItem.in);
-    } else {
-      inwardStock = Number(product.stock) || 0;
-    }
+  // Inward received stock: determine true cumulative inward from product and linked inventory
+  const pIn = Number(product.inwardStock);
+  const pStock = Number(product.stock);
+  const invIn = inventoryItem && !isNaN(Number(inventoryItem.in)) ? Number(inventoryItem.in) : NaN;
+  const invStock = inventoryItem && !isNaN(Number(inventoryItem.stock ?? inventoryItem.currentStock)) ? Number(inventoryItem.stock ?? inventoryItem.currentStock) : NaN;
+
+  let inwardStock = 0;
+  if (!isNaN(pIn) && pIn > 0) {
+    inwardStock = pIn;
+  } else if (!isNaN(invIn) && invIn > 0) {
+    inwardStock = invIn;
+  } else if (!isNaN(pStock) && pStock > 0) {
+    inwardStock = pStock;
+  } else if (!isNaN(invStock) && invStock > 0) {
+    inwardStock = invStock;
+  } else if (!isNaN(pIn)) {
+    inwardStock = pIn;
+  } else if (!isNaN(pStock)) {
+    inwardStock = pStock;
   }
   inwardStock = Math.max(0, inwardStock);
 
@@ -50,7 +61,15 @@ export function calculateProductStock(product = {}, inventoryItem = null) {
   const bufferMargin = currentAvailableStock - minStock;
 
   // Commercial Valuation
-  const unitPrice = Math.max(0, Number(product.price) || 0);
+  const rawPrice = Number(product.price);
+  const rawSellingPrice = Number(product.sellingPrice);
+  const rawPurchasePrice = Number(product.purchasePrice);
+  const rawCostPrice = Number(product.costPrice);
+  const unitPrice = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice
+    : !isNaN(rawSellingPrice) && rawSellingPrice > 0 ? rawSellingPrice
+    : !isNaN(rawPurchasePrice) && rawPurchasePrice > 0 ? rawPurchasePrice
+    : !isNaN(rawCostPrice) && rawCostPrice > 0 ? rawCostPrice
+    : 0;
   const valuation = currentAvailableStock * unitPrice;
 
   // Stock Status categorization

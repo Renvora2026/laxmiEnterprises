@@ -336,9 +336,11 @@ export function generateInvoicePDF(invoice, company = {}, clientExtra = {}) {
   const summaryBoxY = finalTableY;
 
   // Totals Box
+  const hasPaymentBreakdown = invoice.paidAmount !== undefined;
+  const boxHeight = hasPaymentBreakdown ? 47 : 36;
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(summaryBoxX, summaryBoxY, summaryBoxW, 36, 2, 2, "FD");
+  doc.roundedRect(summaryBoxX, summaryBoxY, summaryBoxW, boxHeight, 2, 2, "FD");
 
   let lineY = summaryBoxY + 6;
   doc.setFontSize(8);
@@ -381,6 +383,24 @@ export function generateInvoicePDF(invoice, company = {}, clientExtra = {}) {
   doc.setTextColor(255, 255, 255);
   doc.text("GRAND TOTAL (INR):", summaryBoxX + 4, lineY + 6);
   doc.text(`Rs. ${invoiceTotal.toLocaleString("en-IN")}`, rightX - 4, lineY + 6, { align: "right" });
+
+  if (hasPaymentBreakdown) {
+    lineY += 12.5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(5, 150, 105);
+    doc.text("Amount Received / Paid:", summaryBoxX + 4, lineY);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Rs. ${Number(invoice.paidAmount || 0).toLocaleString("en-IN")}`, rightX - 4, lineY, { align: "right" });
+
+    lineY += 4.5;
+    const balance = Number(invoice.balanceDue || 0);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(balance > 0 ? 220 : 5, balance > 0 ? 38 : 150, balance > 0 ? 38 : 105);
+    doc.text("Remaining Balance Due:", summaryBoxX + 4, lineY);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Rs. ${balance.toLocaleString("en-IN")}`, rightX - 4, lineY, { align: "right" });
+  }
 
   // LEFT SIDE: AMOUNT IN WORDS & BANK DETAILS
   const leftW = contentWidth - summaryBoxW - 6;

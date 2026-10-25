@@ -3,7 +3,7 @@ import {
   X, MessageCircle, Phone, MapPin, Mail, Calendar,
   Building2, Wheat, Milk, Tractor, Store, Smartphone,
   Printer, Pencil, Trash2, CheckCircle2, Clock, Send,
-  Tag, Copy, Check, User, Sparkles, ExternalLink
+  Tag, Copy, Check, User, Sparkles, ExternalLink, UserCheck
 } from "lucide-react";
 import {
   getWhatsAppUrl,
@@ -20,6 +20,7 @@ export default function ExpoLeadViewModal({
   onEdit,
   onDelete,
   onStatusChange,
+  onConvertToClient,
   showToast
 }) {
   const printRef = useRef(null);
@@ -538,6 +539,29 @@ export default function ExpoLeadViewModal({
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {onConvertToClient && lead.status !== "Converted" && (
+              <button
+                type="button"
+                className="outline"
+                onClick={() => {
+                  onClose();
+                  onConvertToClient(lead);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  borderColor: "var(--primary)",
+                  color: "var(--primary)",
+                  background: "rgba(0, 91, 181, 0.08)",
+                  fontWeight: 600
+                }}
+                title="Convert this lead into a registered Client in Customer Master"
+              >
+                <UserCheck size={14} />
+                Convert to Client Account
+              </button>
+            )}
             {onEdit && (
               <button
                 type="button"

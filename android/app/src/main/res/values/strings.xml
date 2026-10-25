@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Laxmi Enterprises ERP</string>
-    <string name="title_activity_main">Laxmi Enterprises ERP</string>
-    <string name="package_name">com.laxmienterprises.erp</string>
-    <string name="custom_url_scheme">com.laxmienterprises.erp</string>
-</resources>

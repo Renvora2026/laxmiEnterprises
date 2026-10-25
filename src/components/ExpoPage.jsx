@@ -3,7 +3,7 @@ import {
   Users, Plus, Search, MessageCircle, Download,
   Pencil, Trash2, MapPin, Phone, Calendar, CheckCircle2,
   AlertCircle, Sparkles, Filter, X, ExternalLink, Send, Building2,
-  Wheat, Milk, Tractor, Smartphone, Tag, Eye
+  Wheat, Milk, Tractor, Smartphone, Tag, Eye, UserCheck
 } from "lucide-react";
 import ExpoLeadModal from "./ExpoLeadModal";
 import ExpoLeadViewModal from "./ExpoLeadViewModal";
@@ -37,6 +37,7 @@ function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
 export default function ExpoPage({
   expoLeads = [],
   onSaveExpoLeads,
+  onConvertToClient,
   company = {},
   showToast
 }) {
@@ -604,6 +605,15 @@ export default function ExpoPage({
                       {/* Actions */}
                       <td style={{ textAlign: "center" }}>
                         <div className="row-actions" style={{ justifyContent: "center" }}>
+                          {onConvertToClient && lead.status !== "Converted" && (
+                            <button
+                              title={`Convert ${lead.name} into Registered Client Account`}
+                              onClick={() => onConvertToClient(lead)}
+                              style={{ color: "var(--primary)" }}
+                            >
+                              <UserCheck size={15} />
+                            </button>
+                          )}
                           <button
                             title={`View Full Details of ${lead.name}`}
                             onClick={() => setViewingLead(lead)}
@@ -685,6 +695,7 @@ export default function ExpoPage({
           setDeletingLead(lead);
         }}
         onStatusChange={handleStatusChange}
+        onConvertToClient={onConvertToClient}
         showToast={showToast}
       />
 

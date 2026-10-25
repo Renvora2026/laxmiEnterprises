@@ -8,11 +8,14 @@ import {
 import PurchaseModal from "./PurchaseModal";
 import PurchaseViewModal from "./PurchaseViewModal";
 import { generatePurchaseInvoicePDF } from "../services/pdfService";
+import { erpApi } from "../services/api";
 
 export default function PurchasesPage({
   purchases = [],
   onSavePurchases,
+  onCreatePurchase,
   clients = [],
+  products = [],
   company = {},
   showToast
 }) {
@@ -40,11 +43,23 @@ export default function PurchasesPage({
 
   // Aggregate Agribusiness Procurement KPIs
   const totalPurchasesAmount = useMemo(() => {
-    return purchases.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
+    return purchases.reduce((sum, p) => {
+      const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
+      const pGst = Number(p.gstAmount ?? p.tax ?? 0);
+      const tot = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
+      const paid = Number(p.paidAmount || 0);
+      return sum + Math.max(tot, paid);
+    }, 0);
   }, [purchases]);
 
   const totalPaidAmount = useMemo(() => {
-    return purchases.reduce((sum, p) => sum + (Number(p.paidAmount) || 0), 0);
+    return purchases.reduce((sum, p) => {
+      const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
+      const pGst = Number(p.gstAmount ?? p.tax ?? 0);
+      const tot = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
+      const paid = Number(p.paidAmount !== undefined ? p.paidAmount : (p.paymentStatus === "Paid" ? tot : 0));
+      return sum + paid;
+    }, 0);
   }, [purchases]);
 
   const totalBalanceDue = useMemo(() => {
@@ -107,27 +122,32 @@ export default function PurchasesPage({
   };
 
   const handleSavePurchase = (saved) => {
-    let updated;
     if (editingPurchase) {
-      updated = purchases.map(p => p.id === saved.id ? saved : p);
+      const updated = purchases.map(p => p.id === saved.id ? saved : p);
+      if (onSavePurchases) onSavePurchases(updated);
       if (showToast) showToast(`✓ Updated Purchase Voucher ${saved.id}`);
     } else {
-      updated = [saved, ...purchases];
+      if (onCreatePurchase) {
+        onCreatePurchase(saved);
+      } else if (onSavePurchases) {
+        onSavePurchases([saved, ...purchases]);
+      }
       if (showToast) showToast(`✓ Recorded new Inward Purchase ${saved.id} for ${saved.vendorName}`);
     }
-    if (onSavePurchases) onSavePurchases(updated);
     setModalOpen(false);
     setEditingPurchase(null);
   };
 
   const handleDeletePurchase = (purchaseToDelete) => {
     if (!purchaseToDelete) return;
-    const confirmMsg = `Are you sure you want to delete purchase voucher "${purchaseToDelete.id}" from ${purchaseToDelete.vendorName || purchaseToDelete.name}?`;
+    const pId = purchaseToDelete.id || purchaseToDelete.purchaseId;
+    const confirmMsg = `Are you sure you want to delete purchase voucher "${pId}" from ${purchaseToDelete.vendorName || purchaseToDelete.name}?`;
     if (window.confirm(confirmMsg)) {
-      const updated = purchases.filter(p => p.id !== purchaseToDelete.id);
+      const updated = purchases.filter(p => p.id !== pId && p.purchaseId !== pId && p.id !== purchaseToDelete.id && p.purchaseId !== purchaseToDelete.purchaseId);
       if (onSavePurchases) onSavePurchases(updated);
+      erpApi.deletePurchase(pId).catch(() => {});
       setViewingPurchase(null);
-      if (showToast) showToast(`✓ Deleted Purchase Voucher ${purchaseToDelete.id}`);
+      if (showToast) showToast(`✓ Deleted Purchase Voucher ${pId}`);
     }
   };
 
@@ -340,10 +360,10 @@ export default function PurchasesPage({
                 <tr>
                   <th style={{ width: 130 }}>PO & Bill ID</th>
                   <th>Supplier / Seller Account</th>
-                  <th style={{ width: 220 }}>Village, Taluka & Contact</th>
-                  <th style={{ width: 260 }}>Specific Category Intelligence</th>
+                  <th style={{ width: 200 }}>Village, Taluka & Contact</th>
+                  <th style={{ width: 280 }}>Procured Goods & Inward Volume</th>
                   <th style={{ width: 110 }}>Bill Date</th>
-                  <th style={{ textAlign: "right", width: 130 }}>Inward Total (₹)</th>
+                  <th style={{ textAlign: "right", width: 140 }}>Inward Total (₹)</th>
                   <th style={{ width: 110, textAlign: "center" }}>Status</th>
                   <th style={{ textAlign: "center", width: 110 }}>Actions</th>
                 </tr>
@@ -353,6 +373,20 @@ export default function PurchasesPage({
                   const isDairy = p.category === "Dairy";
                   const isFarmer = p.category === "Farmers";
                   const isFeed = p.category === "Animal Feed Shop";
+
+                  // Unified numerical math
+                  const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
+                  const pGst = Number(p.gstAmount ?? p.tax ?? 0);
+                  const pRawTotal = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
+                  const pPaid = Number(p.paidAmount !== undefined ? p.paidAmount : (p.paymentStatus === "Paid" ? pRawTotal : 0));
+                  const pEffectiveTotal = Math.max(pRawTotal, pPaid);
+                  const pBalance = Math.max(0, pEffectiveTotal - pPaid);
+
+                  // Procurement quantity & unit resolution
+                  const qty = Number(p.inwardQty || p.quantity || (isDairy ? p.milkQuantity : (isFarmer ? p.farmQuantity : p.feedQuantity)) || 1);
+                  const unit = p.unit || (isDairy ? "Liters" : isFarmer ? "Tonnes" : "Bags");
+                  const unitRate = Number(p.unitRate || p.rate || (isDairy ? p.ratePerLiter : null) || (qty > 0 && pTaxable > 0 ? Math.round(pTaxable / qty) : 0));
+                  const itemTitle = p.itemDescription || p.productName || (isDairy ? "Daily Raw Milk Batch" : isFarmer ? (p.farmItemsSupplied || "Direct Farm Harvest") : "Cattle Feed Stock");
 
                   return (
                     <tr key={p.id}>
@@ -404,24 +438,21 @@ export default function PurchasesPage({
                             color: isDairy ? "#0284c7" :
                                    isFarmer ? "#d97706" : "#059669"
                           }}>
-                            {(p.vendorName || p.name || "P")[0]}
+                            {(p.vendorName || p.name || "S")[0].toUpperCase()}
                           </div>
                           <div>
                             <b
-                              style={{ cursor: "pointer", color: "var(--text-main)" }}
+                              style={{ cursor: "pointer", color: "var(--text-main)", fontSize: "13px" }}
                               onClick={() => setViewingPurchase(p)}
                               title="Click to view purchase voucher"
                             >
-                              {p.vendorName || p.name}
+                              {p.vendorName || p.name || "Registered Vendor"}
                             </b>
-                            {p.contactPerson && (
-                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                                Contact: {p.contactPerson}
+                            {p.contactPerson && p.contactPerson.trim() && p.contactPerson !== (p.vendorName || p.name) && (
+                              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: 1 }}>
+                                👤 {p.contactPerson}
                               </div>
                             )}
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: 1 }}>
-                              {p.itemDescription}
-                            </div>
                           </div>
                         </div>
                       </td>
@@ -430,84 +461,60 @@ export default function PurchasesPage({
                       <td>
                         <div style={{ fontSize: "12px", lineHeight: 1.4 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-main)", fontWeight: 500 }}>
-                            <MapPin size={12} style={{ color: "var(--primary)" }} />
-                            <span>{p.village || "-"}, {p.taluka || "-"}</span>
+                            <MapPin size={12} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                            <span>{[p.village, p.taluka].filter(Boolean).join(", ") || "Location -"}</span>
                           </div>
                           <div style={{ color: "var(--text-muted)", fontSize: "11px", paddingLeft: 16 }}>
                             Dist: <b>{p.district || "-"}</b>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: "11px", color: "var(--text-muted)" }}>
-                            <Phone size={11} /> <span>{p.contact || "-"}</span>
-                            {p.dob && (
-                              <span title={`DOB: ${p.dob}`}>• 🎂 {p.dob}</span>
-                            )}
-                          </div>
+                          {p.contact && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: "11px", color: "var(--text-muted)" }}>
+                              <Phone size={11} /> <span>{p.contact}</span>
+                            </div>
+                          )}
                         </div>
                       </td>
 
-                      {/* Specific Information Column */}
+                      {/* Procured Goods & Inward Volume */}
                       <td>
-                        {/* 1. Animal Feed Shop */}
-                        {isFeed && (
-                          <div style={{ fontSize: "11.5px", lineHeight: 1.4 }}>
-                            {p.brands && (
-                              <div style={{ fontWeight: 600, color: "#059669" }}>
-                                ⭐ Brands: {p.brands.length > 34 ? `${p.brands.slice(0, 34)}...` : p.brands}
-                              </div>
-                            )}
-                            {p.companies && (
-                              <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>
-                                🏢 {p.companies.length > 34 ? `${p.companies.slice(0, 34)}...` : p.companies}
-                              </div>
-                            )}
-                            {p.numberOfAnimals && (
-                              <div style={{ color: "#059669", fontSize: "10.5px", marginTop: 2, fontWeight: 600 }}>
-                                🐾 {p.numberOfAnimals}
-                              </div>
-                            )}
-                            {p.feedQuantity && (
-                              <div style={{ color: "var(--text-muted)", fontSize: "10.5px" }}>
-                                Inward: {p.feedQuantity}
-                              </div>
+                        <div style={{ fontSize: "12px", lineHeight: 1.45 }}>
+                          <div style={{ fontWeight: 600, color: "var(--text-main)" }}>
+                            {itemTitle}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+                            <span style={{
+                              background: "rgba(0, 91, 181, 0.08)",
+                              color: "var(--primary)",
+                              padding: "2px 7px",
+                              borderRadius: 4,
+                              fontSize: "11px",
+                              fontWeight: 600
+                            }}>
+                              Inward: {qty} {unit}
+                            </span>
+                            {unitRate > 0 && (
+                              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                                @ ₹{unitRate.toLocaleString("en-IN")}/{unit.replace(/s$/, "")}
+                              </span>
                             )}
                           </div>
-                        )}
-
-                        {/* 2. Dairy */}
-                        {isDairy && (
-                          <div style={{ fontSize: "11.5px", lineHeight: 1.4 }}>
-                            <div style={{ color: "#0284c7", fontWeight: 700 }}>
-                              🥛 {p.numberOfSuppliers || 0} Member Suppliers
+                          {/* Specific Quality Metrics */}
+                          {isDairy && (p.fatPercent || p.snfPercent) && (
+                            <div style={{ color: "#0284c7", fontSize: "10.5px", marginTop: 3, fontWeight: 500 }}>
+                              🥛 Quality: {p.fatPercent ? `${p.fatPercent}% Fat` : ""} {p.snfPercent ? `• ${p.snfPercent}% SNF` : ""}
                             </div>
-                            <div style={{ color: "var(--text-main)", fontSize: "11px" }}>
-                              Quantity: <b>{p.milkQuantity || "-"}</b>
+                          )}
+                          {isDairy && p.numberOfSuppliers > 0 && (
+                            <div style={{ color: "var(--text-muted)", fontSize: "10.5px" }}>
+                              👥 {p.numberOfSuppliers} Member Farmers
                             </div>
-                            {(p.fatPercent || p.snfPercent) && (
-                              <div style={{ color: "var(--text-muted)", fontSize: "10.5px" }}>
-                                Grade: {p.fatPercent ? `${p.fatPercent}% Fat` : ""} {p.snfPercent ? `• ${p.snfPercent}% SNF` : ""} {p.ratePerLiter ? `• ₹${p.ratePerLiter}/L` : ""}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 3. Farmers */}
-                        {isFarmer && (
-                          <div style={{ fontSize: "11.5px", lineHeight: 1.4 }}>
-                            <div style={{ color: "#d97706", fontWeight: 700 }}>
-                              🚜 {p.numberOfAnimals || 0} Animals
+                          )}
+                          {isFarmer && p.numberOfAnimals && (
+                            <div style={{ color: "#d97706", fontSize: "10.5px", marginTop: 2 }}>
+                              🚜 Cattle / Herd: {p.numberOfAnimals} Animals
                             </div>
-                            {p.animalDetails && (
-                              <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>
-                                {p.animalDetails.length > 32 ? `${p.animalDetails.slice(0, 32)}...` : p.animalDetails}
-                              </div>
-                            )}
-                            {p.farmItemsSupplied && (
-                              <div style={{ color: "var(--text-main)", fontSize: "10.5px", marginTop: 1 }}>
-                                🌱 {p.farmItemsSupplied} {p.farmQuantity ? `(${p.farmQuantity})` : ""}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
 
                       {/* Date */}
@@ -520,17 +527,21 @@ export default function PurchasesPage({
                         )}
                       </td>
 
-                      {/* Total Amount & Settlement */}
+                      {/* Inward Total & Settlement */}
                       <td style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 700, fontSize: "13px" }}>
-                          ₹{(Number(p.totalAmount) || 0).toLocaleString("en-IN")}
+                        <div style={{ fontWeight: 700, fontSize: "13.5px", color: "var(--text-main)" }}>
+                          ₹{pEffectiveTotal.toLocaleString("en-IN")}
                         </div>
-                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                          Paid: ₹{(Number(p.paidAmount) || 0).toLocaleString("en-IN")}
+                        <div style={{ fontSize: "11px", color: "#10b981", fontWeight: 500 }}>
+                          Paid: ₹{pPaid.toLocaleString("en-IN")}
                         </div>
-                        {p.balanceDue > 0 && (
-                          <div style={{ fontSize: "11px", color: "var(--danger)", fontWeight: 600 }}>
-                            Due: ₹{p.balanceDue.toLocaleString("en-IN")}
+                        {pBalance > 0 ? (
+                          <div style={{ fontSize: "11px", color: "var(--danger)", fontWeight: 600, marginTop: 1 }}>
+                            Due: ₹{pBalance.toLocaleString("en-IN")}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: "10px", color: "#10b981" }}>
+                            ✓ Settled in Full
                           </div>
                         )}
                       </td>
@@ -606,6 +617,7 @@ export default function PurchasesPage({
         purchaseToEdit={editingPurchase}
         nextId={nextPOId}
         clients={clients}
+        products={products}
       />
 
       {/* MODAL 2: VIEW PURCHASE VOUCHER */}

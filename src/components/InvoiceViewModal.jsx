@@ -289,36 +289,82 @@ export default function InvoiceViewModal({
                   <tr style={{ background: "#005bb5", color: "#ffffff", fontSize: 12 }}>
                     <th style={{ padding: "10px 12px", textAlign: "center", width: 40 }}>#</th>
                     <th style={{ padding: "10px 12px", textAlign: "left" }}>Item Description & Particulars</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", width: 120 }}>HSN / SAC</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", width: 70 }}>Qty</th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", width: 110 }}>HSN / SAC</th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", width: 90 }}>Qty & Unit</th>
+                    <th style={{ padding: "10px 12px", textAlign: "right", width: 100 }}>Rate (₹)</th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", width: 70 }}>GST %</th>
                     <th style={{ padding: "10px 12px", textAlign: "right", width: 110 }}>Taxable (₹)</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", width: 80 }}>GST Rate</th>
-                    <th style={{ padding: "10px 12px", textAlign: "right", width: 120 }}>Total (₹)</th>
+                    <th style={{ padding: "10px 12px", textAlign: "right", width: 110 }}>Total (₹)</th>
                   </tr>
                 </thead>
                 <tbody style={{ fontSize: 12 }}>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "12px", textAlign: "center", color: "#64748b" }}>1</td>
-                    <td style={{ padding: "12px" }}>
-                      <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                        {invoice.category || "Industrial Hardware"} Supplies Lot
-                      </div>
-                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-                        Commercial supply order as per agreed technical specification & delivery challan
-                      </div>
-                    </td>
-                    <td style={{ padding: "12px", textAlign: "center", fontFamily: "monospace", color: "#475569" }}>
-                      8481 / 7318
-                    </td>
-                    <td style={{ padding: "12px", textAlign: "center" }}>1 Lot</td>
-                    <td style={{ padding: "12px", textAlign: "right", fontWeight: 600 }}>
-                      ₹{amount.toLocaleString("en-IN")}
-                    </td>
-                    <td style={{ padding: "12px", textAlign: "center", color: "#64748b" }}>18% GST</td>
-                    <td style={{ padding: "12px", textAlign: "right", fontWeight: 800, color: "#005bb5" }}>
-                      ₹{total.toLocaleString("en-IN")}
-                    </td>
-                  </tr>
+                  {Array.isArray(invoice.items) && invoice.items.length > 0 ? (
+                    invoice.items.map((it, idx) => {
+                      const itemTaxable = Number(it.taxable) || (Number(it.qty || 1) * Number(it.rate || 0));
+                      const itemGst = Number(it.gstRate || 18);
+                      const itemTax = Math.round(itemTaxable * (itemGst / 100));
+                      const itemTotal = Number(it.total) || (itemTaxable + itemTax);
+                      return (
+                        <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                          <td style={{ padding: "10px 12px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ fontWeight: 700, color: "#0f172a" }}>
+                              {it.description || it.name || "Industrial Supplies Item"}
+                            </div>
+                            {it.productId && (
+                              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                                Catalog Code: {it.productId}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#475569" }}>
+                            {it.hsn || "7306 / 8481"}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600 }}>
+                            {it.qty || 1} {it.unit || "Nos"}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                            ₹{Number(it.rate || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "center", color: "#64748b" }}>
+                            {itemGst}%
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>
+                            ₹{itemTaxable.toLocaleString("en-IN")}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: "#005bb5" }}>
+                            ₹{itemTotal.toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "12px", textAlign: "center", color: "#64748b" }}>1</td>
+                      <td style={{ padding: "12px" }}>
+                        <div style={{ fontWeight: 700, color: "#0f172a" }}>
+                          {invoice.category || "Industrial Hardware"} Supplies Lot
+                        </div>
+                        <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                          Commercial supply order as per agreed technical specification & delivery challan
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "center", fontFamily: "monospace", color: "#475569" }}>
+                        8481 / 7318
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "center" }}>1 Lot</td>
+                      <td style={{ padding: "12px", textAlign: "right" }}>
+                        ₹{amount.toLocaleString("en-IN")}
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "center", color: "#64748b" }}>18% GST</td>
+                      <td style={{ padding: "12px", textAlign: "right", fontWeight: 600 }}>
+                        ₹{amount.toLocaleString("en-IN")}
+                      </td>
+                      <td style={{ padding: "12px", textAlign: "right", fontWeight: 800, color: "#005bb5" }}>
+                        ₹{total.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -382,6 +428,20 @@ export default function InvoiceViewModal({
                   <span>Grand Total (INR):</span>
                   <span>₹{total.toLocaleString("en-IN")}</span>
                 </div>
+
+                {/* Payment settlement breakdown */}
+                {invoice.paidAmount !== undefined && (
+                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#059669", marginBottom: 4 }}>
+                      <span>Amount Received / Paid:</span>
+                      <span style={{ fontWeight: 700 }}>₹{Number(invoice.paidAmount || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: (Number(invoice.balanceDue) || 0) > 0 ? "#dc2626" : "#059669" }}>
+                      <span>Remaining Balance Due:</span>
+                      <span style={{ fontWeight: 800 }}>₹{(Number(invoice.balanceDue) || 0).toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

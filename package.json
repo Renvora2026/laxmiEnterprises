@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "npm --prefix backend run dev",
+    "backend": "npm --prefix backend run dev",
     "build": "vite build",
     "preview": "vite preview",
-    "cap:sync": "cap sync android",
-    "cap:open": "cap open android",
-    "build:apk": "vite build && cap sync android && cd android && .\\gradlew.bat assembleDebug"
+    "mobile:run": "cd laxmi_enterprises_mobile && flutter run",
+    "mobile:build": "cd laxmi_enterprises_mobile && flutter build apk --release"
   },
   "dependencies": {
-    "@capacitor/core": "^6.2.0",
     "axios": "^1.8.4",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
@@ -20,12 +20,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.6.2",
-    "recharts": "^2.15.3",
-    "xlsx": "^0.18.5"
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.2.0",
-    "@capacitor/cli": "^6.2.0",
     "@vitejs/plugin-react": "^4.4.1",
     "vite": "^6.3.5"
   }

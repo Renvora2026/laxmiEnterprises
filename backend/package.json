@@ -1,0 +1,40 @@
+{
+  "name": "laxmi-enterprises-backend",
+  "version": "1.0.0",
+  "description": "Production MySQL REST API Backend for Laxmi Enterprises ERP Portal (Hostinger Ready)",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "server": "nodemon src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "db:sync": "node src/scripts/syncDb.js"
+  },
+  "keywords": [
+    "erp",
+    "laxmi-enterprises",
+    "express",
+    "mysql",
+    "sequelize",
+    "hostinger",
+    "rest-api"
+  ],
+  "author": "Laxmi Enterprises",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.24.6",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

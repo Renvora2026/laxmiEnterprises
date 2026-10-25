@@ -1,86 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Lock, Mail, Eye, EyeOff, ShieldCheck,
-  CheckCircle2, ArrowRight, Sparkles, User, Palette, Key, Shield,
-  Layers, Check, HelpCircle, Sun, Moon, AlertCircle
+  CheckCircle2, ArrowRight, User, AlertCircle, Database
 } from "lucide-react";
-import {
-  recordAndAuthenticateUser,
-  getStoredCredentials
-} from "../services/authService";
-import CredentialsLedgerModal from "./CredentialsLedgerModal";
+import ThemeSelector from "./ThemeSelector";
+import { saveAuthSession } from "../services/authService";
+import { erpApi } from "../services/api";
 import { FieldError, RequiredStar, ValidationSummary } from "./ValidationFeedback";
 import {
   validateRequiredText,
   validateEmail
 } from "../utils/validators";
 
-const DEMO_ACCOUNTS = [
-  {
-    role: "Super Administrator",
-    name: "Chaitrali Shevtekar",
-    username: "admin@laxmienterprises.com",
-    password: "Admin@123",
-    badge: "Super Admin",
-    color: "#005bb5"
-  },
-  {
-    role: "Warehouse & Inventory",
-    name: "Rahul Deshmukh",
-    username: "rahul.ops@laxmienterprises.com",
-    password: "Warehouse@2026",
-    badge: "Warehouse",
-    color: "#10b981"
-  },
-  {
-    role: "Commercial Sales",
-    name: "Pooja Patil",
-    username: "pooja.sales@laxmienterprises.com",
-    password: "Sales@2026",
-    badge: "Sales",
-    color: "#0284c7"
-  },
-  {
-    role: "Tax & Accounts",
-    name: "Amit Kulkarni",
-    username: "amit.acc@laxmienterprises.com",
-    password: "Finance@2026",
-    badge: "Finance",
-    color: "#8b5cf6"
-  }
-];
-
 export default function LoginPage({
   onLoginSuccess,
   currentTheme = "light",
   onSelectTheme,
-  showToast
+  showToast,
 }) {
   const [mode, setMode] = useState("signin"); // "signin" | "register"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("Super Administrator");
+  const [role, setRole] = useState("Administrator");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [loginFeedback, setLoginFeedback] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [credentialsList, setCredentialsList] = useState(getStoredCredentials());
-
-  // Refresh credentials count
-  const refreshCredentials = () => {
-    setCredentialsList(getStoredCredentials());
-  };
-
-  const handleSelectDemo = (account) => {
-    setUsername(account.username);
-    setPassword(account.password);
-    setName(account.name);
-    setRole(account.role);
-    setLoginFeedback(null);
-    setErrors({});
-  };
 
   const validate = () => {
     const errs = {};
@@ -110,232 +56,191 @@ export default function LoginPage({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsLoading(true);
     setLoginFeedback(null);
 
-    setTimeout(() => {
-      try {
-        const result = recordAndAuthenticateUser({
-          username: username.trim(),
-          password: password.trim(),
-          name: mode === "register" ? name.trim() : (name || username.split("@")[0]),
-          role,
-          isNewRegistration: mode === "register"
+    const cleanEmail = username.trim();
+    const cleanPass = password.trim();
+
+    try {
+      if (mode === "register") {
+        const apiRes = await erpApi.register({
+          name: name.trim(),
+          email: cleanEmail,
+          password: cleanPass,
+          role: "admin",
         });
-
-        refreshCredentials();
-        setIsLoading(false);
-
-        const msg = `✓ Logged in as ${result.user.name || result.user.username}! Welcome to Laxmi Enterprises ERP.`;
-
-        setLoginFeedback({ type: "success", message: msg });
-        if (showToast) showToast(msg);
-
-        setTimeout(() => {
-          if (onLoginSuccess) {
-            onLoginSuccess(result.user);
-          }
-        }, 600);
-      } catch (err) {
-        setIsLoading(false);
-        setLoginFeedback({ type: "error", message: "Failed to process login: " + err.message });
+        const authData = apiRes.data;
+        saveAuthSession(authData.token, authData.user);
+        if (showToast) showToast(`✓ Account created in MySQL! Welcome, ${authData.user?.name || name.trim()}.`);
+        onLoginSuccess(authData.user);
+      } else {
+        // Strict JWT Sign-in against MySQL
+        const apiRes = await erpApi.login({
+          email: cleanEmail,
+          password: cleanPass,
+        });
+        const authData = apiRes.data;
+        saveAuthSession(authData.token, authData.user);
+        if (showToast) showToast(`✓ Authenticated successfully! Welcome, ${authData.user?.name || cleanEmail}.`);
+        onLoginSuccess(authData.user);
       }
-    }, 400);
+    } catch (err) {
+      setLoginFeedback({
+        type: "error",
+        message: err.message || "Authentication failed. Please verify your email and password.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="login-viewport">
-      {/* Dynamic Background Mesh */}
+      {/* Ambient background decoration */}
       <div className="login-bg-mesh" />
 
-      {/* Top Utility Bar */}
-      <div className="login-topbar">
+      {/* Top Header with Brand and Theme Selector */}
+      <header className="login-topbar">
         <div className="login-brand-pill">
           <img src="/logo.png" alt="Laxmi Enterprises" className="login-mini-logo" />
-          <span>Laxmi Enterprises ERP</span>
+          <span>LAXMI ENTERPRISES ERP</span>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Quick theme selector */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: "#059669",
+              background: "rgba(16, 185, 129, 0.08)",
+              border: "1px solid rgba(16, 185, 129, 0.3)",
+              padding: "4px 10px",
+              borderRadius: 20
+            }}
+          >
+            <Database size={13} color="#10b981" />
+            <span>MySQL Online</span>
+          </div>
           {onSelectTheme && (
-            <div className="login-theme-buttons">
-              <button
-                type="button"
-                onClick={() => onSelectTheme("light")}
-                className={`login-theme-btn ${(currentTheme !== "dark" && currentTheme !== "midnight") ? "active" : ""}`}
-                title="Switch to Light Mode"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "5px 10px",
-                  borderRadius: "8px",
-                  border: (currentTheme !== "dark" && currentTheme !== "midnight") ? "1.5px solid var(--primary)" : "1px solid var(--border)",
-                  background: (currentTheme !== "dark" && currentTheme !== "midnight") ? "var(--primary-light)" : "transparent",
-                  color: (currentTheme !== "dark" && currentTheme !== "midnight") ? "var(--primary)" : "var(--text-muted)",
-                  fontSize: "12px",
-                  fontWeight: 650,
-                  cursor: "pointer"
-                }}
-              >
-                <Sun size={14} style={{ color: "#f59e0b" }} />
-                <span>Light</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelectTheme("dark")}
-                className={`login-theme-btn ${(currentTheme === "dark" || currentTheme === "midnight") ? "active" : ""}`}
-                title="Switch to Dark Mode"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "5px 10px",
-                  borderRadius: "8px",
-                  border: (currentTheme === "dark" || currentTheme === "midnight") ? "1.5px solid var(--primary)" : "1px solid var(--border)",
-                  background: (currentTheme === "dark" || currentTheme === "midnight") ? "var(--primary-light)" : "transparent",
-                  color: (currentTheme === "dark" || currentTheme === "midnight") ? "var(--primary)" : "var(--text-muted)",
-                  fontSize: "12px",
-                  fontWeight: 650,
-                  cursor: "pointer"
-                }}
-              >
-                <Moon size={14} style={{ color: "#38bdf8" }} />
-                <span>Dark</span>
-              </button>
-            </div>
+            <ThemeSelector currentTheme={currentTheme} onSelectTheme={onSelectTheme} />
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Main Login Container */}
+      {/* Perfectly Centered Login Container */}
       <div className="login-container">
         <div className="login-card">
-          {/* Brand Header */}
+          {/* Logo & Header */}
           <div className="login-header">
             <div className="login-logo-halo">
-              <img src="/logo.png" alt="Laxmi Enterprises Official Logo" className="login-hero-logo" />
+              <img src="/logo.png" alt="Laxmi Enterprises" className="login-hero-logo" />
             </div>
-            <h1 className="login-brand-title">LAXMI ENTERPRISES</h1>
+            <h2 className="login-brand-title">
+              LAXMI ENTERPRISES
+            </h2>
             <p className="login-brand-subtitle">
-              Industrial Supplies, Hardware & Trading Portal
+              Enterprise Supplies, Hardware & Agro Trading Portal
             </p>
           </div>
 
-          {/* Mode Switcher Tabs */}
+          {/* Mode Switch Tabs */}
           <div className="login-tabs">
             <button
               type="button"
               className={`login-tab-btn ${mode === "signin" ? "active" : ""}`}
-              onClick={() => { setMode("signin"); setLoginFeedback(null); setErrors({}); }}
+              onClick={() => { setMode("signin"); setErrors({}); setLoginFeedback(null); }}
             >
-              Sign In to Portal
+              Sign In
             </button>
             <button
               type="button"
               className={`login-tab-btn ${mode === "register" ? "active" : ""}`}
-              onClick={() => { setMode("register"); setLoginFeedback(null); setErrors({}); }}
+              onClick={() => { setMode("register"); setErrors({}); setLoginFeedback(null); }}
             >
-              Register New Account
+              Register Admin
             </button>
           </div>
 
-          {/* Feedback Notice */}
+          {/* Feedback Alert */}
           {loginFeedback && (
-            <div className={`login-feedback ${loginFeedback.type}`}>
-              <CheckCircle2 size={16} />
+            <div className={`login-feedback ${loginFeedback.type === "error" ? "error" : "success"}`}>
+              {loginFeedback.type === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
               <span>{loginFeedback.message}</span>
             </div>
           )}
 
-          <ValidationSummary errors={errors} title="Authentication errors:" />
-
+          {/* Form */}
           <form onSubmit={handleSubmit} className="login-form">
             {mode === "register" && (
               <div className="form-group">
-                <label htmlFor="fullName">Full Name <RequiredStar /></label>
+                <label>
+                  Full Name <RequiredStar />
+                </label>
                 <div className="login-input-wrap">
                   <User size={16} className="login-input-icon" />
                   <input
-                    id="fullName"
-                    name="name"
                     type="text"
-                    className={`form-input login-input ${errors.name ? "is-invalid" : ""}`}
-                    placeholder="e.g. Ramesh Sharma"
+                    className={`login-input ${errors.name ? "is-invalid" : ""}`}
+                    placeholder="e.g. Ramesh Patil"
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
                       if (errors.name) setErrors(prev => ({ ...prev, name: null }));
                     }}
-                    required
                   />
                 </div>
                 <FieldError error={errors.name} />
               </div>
             )}
 
-            {/* Username / Email Field */}
             <div className="form-group">
-              <label htmlFor="username">
-                {mode === "register" ? "Corporate Email" : "Username or Corporate Email"} <RequiredStar />
+              <label>
+                Email / Username <RequiredStar />
               </label>
               <div className="login-input-wrap">
                 <Mail size={16} className="login-input-icon" />
                 <input
-                  id="username"
-                  name="username"
-                  type={mode === "register" ? "email" : "text"}
-                  autoComplete="username"
-                  className={`form-input login-input ${errors.username ? "is-invalid" : ""}`}
-                  placeholder={mode === "register" ? "ramesh@laxmienterprises.com" : "admin@laxmienterprises.com or username"}
+                  type="text"
+                  className={`login-input ${errors.username ? "is-invalid" : ""}`}
+                  placeholder="admin@laxmienterprises.com"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
                     if (errors.username) setErrors(prev => ({ ...prev, username: null }));
                   }}
-                  enterKeyHint="next"
-                  required
                 />
               </div>
               <FieldError error={errors.username} />
             </div>
 
-            {/* Password Field */}
             <div className="form-group">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label htmlFor="current-password">Password <RequiredStar /></label>
-                {mode === "signin" && (
-                  <span style={{ fontSize: "0.75rem", color: "var(--primary)", cursor: "pointer" }} onClick={() => setIsModalOpen(true)}>
-                    Forgot / View Credentials?
-                  </span>
-                )}
-              </div>
+              <label>
+                Password <RequiredStar />
+              </label>
               <div className="login-input-wrap">
                 <Lock size={16} className="login-input-icon" />
                 <input
-                  id="current-password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  className={`form-input login-input ${errors.password ? "is-invalid" : ""}`}
-                  placeholder={mode === "register" ? "At least 6 characters" : "Enter secure password"}
+                  className={`login-input ${errors.password ? "is-invalid" : ""}`}
+                  placeholder={mode === "register" ? "Minimum 6 characters" : "Enter password"}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
-                  enterKeyHint="done"
-                  required
                 />
                 <button
                   type="button"
                   className="login-pwd-toggle"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label="Toggle password view"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -343,74 +248,48 @@ export default function LoginPage({
               <FieldError error={errors.password} />
             </div>
 
-            {/* Role Assignment */}
-            <div className="form-group">
-              <label htmlFor="userRole">Assigned Access Role</label>
-              <select
-                id="userRole"
-                className="form-input login-input"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="Super Administrator">Super Administrator (Full System Control)</option>
-                <option value="Warehouse & Inventory">Warehouse & Inventory (Logistics & Stock)</option>
-                <option value="Commercial Sales">Commercial Sales (Client Accounts & Billing)</option>
-                <option value="Tax & Accounts">Tax & Accounts (GST & Financials)</option>
-                <option value="Operations Staff">Operations Staff (Standard Access)</option>
-              </select>
-            </div>
-
-            {/* Submit Action */}
             <button
               type="submit"
-              className="primary login-submit-btn"
+              className="primary"
               disabled={isLoading}
+              style={{
+                width: "100%",
+                height: 46,
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: "0.95rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                marginTop: 6
+              }}
             >
-              {isLoading ? (
-                <span>Authenticating...</span>
-              ) : (
-                <>
-                  <span>{mode === "signin" ? "Sign In to ERP Portal" : "Create Account"}</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
+              <span>{isLoading ? "Authenticating..." : mode === "signin" ? "Sign In to ERP Portal" : "Create Admin Account"}</span>
+              <ArrowRight size={16} />
             </button>
           </form>
 
-          {/* Quick Demo Credentials Bar */}
-          <div className="login-demo-section">
-            <div className="login-demo-title">
-              <Sparkles size={14} color="var(--primary)" />
-              <span>Quick Test Accounts (Click to Auto-fill):</span>
-            </div>
-
-            <div className="login-demo-grid">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.username}
-                  type="button"
-                  className="login-demo-pill"
-                  onClick={() => handleSelectDemo(acc)}
-                  title={`Use ${acc.name} (${acc.role}) credentials`}
-                >
-                  <span className="login-demo-dot" style={{ background: acc.color }} />
-                  <div>
-                    <strong style={{ display: "block", fontSize: "0.78rem" }}>{acc.badge}</strong>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{acc.username.split("@")[0]}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+          {/* Security badge at bottom */}
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 16,
+              borderTop: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              textAlign: "center"
+            }}
+          >
+            <ShieldCheck size={14} style={{ color: "#10b981" }} />
+            <span>256-Bit SSL • JWT & Bcrypt Protected • MySQL 8.0</span>
           </div>
         </div>
       </div>
-
-      {/* Global Credentials Ledger Modal */}
-      <CredentialsLedgerModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        showToast={showToast}
-      />
     </div>
   );
 }

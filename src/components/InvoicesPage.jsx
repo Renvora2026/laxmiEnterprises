@@ -5,13 +5,16 @@ import {
   Eye, RefreshCw, Printer, ShieldCheck, Filter, ArrowUpRight
 } from "lucide-react";
 import { generateInvoicePDF } from "../services/pdfService";
+import { erpApi } from "../services/api";
 import InvoiceViewModal from "./InvoiceViewModal";
 import InvoiceModal from "./InvoiceModal";
 
 export default function InvoicesPage({
   invoices = [],
   onSaveInvoices,
+  onCreateInvoice,
   clients = [],
+  products = [],
   company = {},
   showToast,
   onOpenCreateInvoice
@@ -34,8 +37,11 @@ export default function InvoicesPage({
   }, [invoices]);
 
   const handleAddInvoice = (newInv) => {
-    const updated = [newInv, ...invoices];
-    if (onSaveInvoices) onSaveInvoices(updated);
+    if (onCreateInvoice) {
+      onCreateInvoice(newInv);
+    } else if (onSaveInvoices) {
+      onSaveInvoices([newInv, ...invoices]);
+    }
     setIsCreateModalOpen(false);
     notify(`✓ Created invoice ${newInv.id} for ${newInv.clientName}`);
   };
@@ -51,19 +57,27 @@ export default function InvoicesPage({
 
   // High-Level Commercial KPIs
   const grossInvoiced = useMemo(() => {
-    return invoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    return invoices.reduce((sum, inv) => sum + (Number(inv.total ?? inv.grandTotal ?? 0) || 0), 0);
   }, [invoices]);
 
   const realizedCollections = useMemo(() => {
-    return invoices
-      .filter(inv => inv.status === "Paid")
-      .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    return invoices.reduce((sum, inv) => {
+      const invTotal = Number(inv.total ?? inv.grandTotal ?? 0);
+      if (inv.paidAmount !== undefined && inv.paidAmount !== null && inv.paidAmount !== "") {
+        return sum + (Number(inv.paidAmount) || 0);
+      }
+      return sum + (inv.status === "Paid" ? invTotal : 0);
+    }, 0);
   }, [invoices]);
 
   const pendingReceivables = useMemo(() => {
-    return invoices
-      .filter(inv => inv.status === "Pending" || inv.status === "Overdue")
-      .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    return invoices.reduce((sum, inv) => {
+      const invTotal = Number(inv.total ?? inv.grandTotal ?? 0);
+      if (inv.balanceDue !== undefined && inv.balanceDue !== null && inv.balanceDue !== "") {
+        return sum + (Number(inv.balanceDue) || 0);
+      }
+      return sum + (inv.status !== "Paid" ? invTotal : 0);
+    }, 0);
   }, [invoices]);
 
   const overdueCount = useMemo(() => {
@@ -112,8 +126,9 @@ export default function InvoicesPage({
   // Delete an invoice
   const handleDeleteInvoice = (id) => {
     if (window.confirm(`Are you sure you want to delete invoice ${id}?`)) {
-      const updated = invoices.filter(inv => inv.id !== id);
+      const updated = invoices.filter(inv => inv.id !== id && inv.invoiceNumber !== id && inv.invoiceNo !== id);
       if (onSaveInvoices) onSaveInvoices(updated);
+      erpApi.deleteInvoice(id).catch(() => {});
       notify(`✓ Invoice ${id} deleted.`);
     }
   };
@@ -162,7 +177,7 @@ export default function InvoicesPage({
               <IndianRupee size={19} />
             </div>
           </div>
-          <div className="stat-value">₹{(grossInvoiced / 100000).toFixed(2)}L</div>
+          <div className="stat-value">₹{grossInvoiced.toLocaleString("en-IN")}</div>
           <div className="trend positive">
             <TrendingUp size={14} />
             <span>{invoices.length} Total Invoices</span>
@@ -176,7 +191,7 @@ export default function InvoicesPage({
               <CheckCircle2 size={19} />
             </div>
           </div>
-          <div className="stat-value">₹{(realizedCollections / 100000).toFixed(2)}L</div>
+          <div className="stat-value">₹{realizedCollections.toLocaleString("en-IN")}</div>
           <div className="trend positive">
             <CheckCircle2 size={14} />
             <span>{invoices.filter(i => i.status === "Paid").length} Paid & Verified</span>
@@ -190,7 +205,7 @@ export default function InvoicesPage({
               <Clock size={19} />
             </div>
           </div>
-          <div className="stat-value">₹{(pendingReceivables / 100000).toFixed(2)}L</div>
+          <div className="stat-value">₹{pendingReceivables.toLocaleString("en-IN")}</div>
           <div className="trend negative">
             <Clock size={14} />
             <span>{invoices.filter(i => i.status === "Pending").length} In Clearance</span>
@@ -500,7 +515,10 @@ export default function InvoicesPage({
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleAddInvoice}
         clients={clients}
+        products={products}
         nextId={nextInvoiceId}
+        company={company}
+        showToast={notify}
       />
     </div>
   );

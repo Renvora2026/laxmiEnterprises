@@ -3347,35 +3347,7 @@ td b {
   box-shadow: var(--shadow-sm);
 }
 
-/* Excel Sync Banner */
-.login-excel-banner {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(2, 132, 199, 0.08) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
-.login-excel-badge-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: #10b981;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.login-excel-banner-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
 
 .login-pill-action {
   background: #10b981;
