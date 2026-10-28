@@ -21,7 +21,7 @@ jobs:
 
       - name: Build React Frontend
         env:
-          VITE_API_URL: https://api.shivcoretech.com/api/v1
+          VITE_API_URL: https://darkcyan-buffalo-697008.hostingersite.com/api/v1
         run: |
           npm ci
           npm run build
