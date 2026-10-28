@@ -59,6 +59,7 @@ const healthCheckHandler = (req, res) => {
     "Laxmi Enterprises ERP Backend Service is running smoothly"
   );
 };
+app.get("/", healthCheckHandler);
 app.get("/api/health", healthCheckHandler);
 app.get("/health", healthCheckHandler);
 

@@ -4,7 +4,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const dbHost = process.env.DB_HOST || "127.0.0.1";
+let dbHost = process.env.DB_HOST || "127.0.0.1";
+// Force IPv4 loopback to avoid Hostinger ::1 IPv6 access denied
+if (dbHost === "localhost") {
+  dbHost = "127.0.0.1";
+}
 const dbPort = Number(process.env.DB_PORT) || 3306;
 const dbName = process.env.DB_NAME || "laxmi_enterprises_db";
 const dbUser = process.env.DB_USER || "root";
