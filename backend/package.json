@@ -2,10 +2,10 @@
   "name": "laxmi-enterprises-backend",
   "version": "1.0.0",
   "description": "Production MySQL REST API Backend for Laxmi Enterprises ERP Portal (Hostinger Ready)",
-  "main": "src/server.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node index.js",
     "server": "nodemon src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/scripts/seed.js",

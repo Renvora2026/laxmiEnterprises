@@ -12,6 +12,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust reverse proxy headers from Hostinger / Cloud load balancers
+app.set("trust proxy", 1);
+
 // Security HTTP headers
 app.use(helmet());
 
