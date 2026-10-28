@@ -1,5 +1,6 @@
+import { toInventoryView, backfillInventory } from "../utils/stockSync.js";
 import { Op } from "sequelize";
-import { Client, Product, Inventory, Purchase, Invoice, ExpoLead, Company } from "../models/index.js";
+import { Client, Vendor, Product, Inventory, Purchase, Invoice, ExpoLead, Company } from "../models/index.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -7,9 +8,13 @@ import { asyncHandler } from "../utils/asyncHandler.js";
  * Get all ERP data from MySQL database
  */
 export const getAllData = asyncHandler(async (req, res) => {
-  const [clients, products, inventory, purchases, invoices, expoLeads, company] = await Promise.all([
+  // purani products ke liye missing inventory rows bana do
+  await backfillInventory();
+
+  const [clients, vendors, products, inventory, purchases, invoices, expoLeads, company] = await Promise.all([
     Client.findAll({ order: [["createdAt", "DESC"]] }),
-    Product.findAll({ order: [["createdAt", "DESC"]] }),
+    Vendor.findAll({ order: [["createdAt", "DESC"]] }),
+    Product.findAll({ include: [{ model: Inventory, as: "inventory" }], order: [["createdAt", "DESC"]] }),
     Inventory.findAll({ order: [["productName", "ASC"]] }),
     Purchase.findAll({ order: [["createdAt", "DESC"]] }),
     Invoice.findAll({ order: [["createdAt", "DESC"]] }),
@@ -17,12 +22,19 @@ export const getAllData = asyncHandler(async (req, res) => {
     Company.findOne({ where: { id: 1 } }),
   ]);
 
+  const prodMap = new Map(products.map((p) => [p.productId, p]));
+
   return ApiResponse.success(
     res,
     {
       clients: clients.map((c) => c.toJSON()),
-      products: products.map((p) => p.toJSON()),
-      inventory: inventory.map((i) => i.toJSON()),
+      vendors: vendors.map((v) => v.toJSON()),
+      products: products.map((p) => {
+        const json = p.toJSON();
+        const liveStock = p.inventory ? Number(p.inventory.currentStock || 0) : Number(json.stock || 0);
+        return { ...json, stock: liveStock, currentStock: liveStock };
+      }),
+      inventory: inventory.map((i) => toInventoryView(i, prodMap.get(i.productId))),
       purchases: purchases.map((p) => p.toJSON()),
       invoices: invoices.map((inv) => inv.toJSON()),
       expoLeads: expoLeads.map((e) => e.toJSON()),
@@ -116,6 +128,67 @@ export const syncClients = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Sync / Save Vendors to MySQL
+ */
+export const syncVendors = asyncHandler(async (req, res) => {
+  const list = Array.isArray(req.body) ? req.body : req.body.vendors || [];
+  const incomingIds = [];
+
+  for (const item of list) {
+    const vendorId = String(item.vendorId || item.id || "");
+    if (!vendorId) continue;
+    incomingIds.push(vendorId);
+
+    const data = {
+      vendorId,
+      name: item.name || "Unnamed Vendor",
+      companyName: item.companyName || "",
+      category: item.category || "Animal Feed Shop",
+      contactPerson: item.contactPerson || "",
+      phone: item.phone || item.contact || "",
+      email: item.email || "",
+      gstin: item.gstin || "",
+      pan: item.pan || "",
+      village: item.village || "",
+      taluka: item.taluka || "",
+      district: item.district || "",
+      city: item.city || "",
+      state: item.state || "Maharashtra",
+      pincode: item.pincode || "",
+      address: item.address || "",
+      bankName: item.bankName || "",
+      accountNumber: item.accountNumber || "",
+      ifscCode: item.ifscCode || "",
+      paymentTerms: item.paymentTerms || "Net 15 Days",
+      status: item.status || "Active",
+      totalPurchases: Number(item.totalPurchases || 0),
+      totalOrders: Number(item.totalOrders || 0),
+      outstandingPayable: Number(item.outstandingPayable || 0),
+      notes: item.notes || "",
+    };
+
+    const [record, created] = await Vendor.findOrCreate({
+      where: { vendorId },
+      defaults: data,
+    });
+
+    if (!created) {
+      await record.update(data);
+    }
+  }
+
+  // Delete vendors removed from frontend list
+  if (incomingIds.length > 0) {
+    await Vendor.destroy({ where: { vendorId: { [Op.notIn]: incomingIds } } });
+  } else if (list.length === 0 && (Array.isArray(req.body) || Array.isArray(req.body?.vendors))) {
+    await Vendor.destroy({ where: {} });
+  }
+
+  const all = await Vendor.findAll({ order: [["createdAt", "DESC"]] });
+  return ApiResponse.success(res, all.map((v) => v.toJSON()), "Vendors saved in MySQL");
+});
+
+/**
  * Sync / Save Invoices to MySQL
  */
 export const syncInvoices = asyncHandler(async (req, res) => {
@@ -197,12 +270,13 @@ export const syncPurchases = asyncHandler(async (req, res) => {
       where: { purchaseId },
       defaults: {
         purchaseId,
+        vendorId: item.vendorId || "",
         vendorName: item.vendorName || "Vendor",
         vendorGstin: item.vendorGstin || "",
         vendorContact: item.vendorContact || "",
         vendorInvoiceNo: item.vendorInvoiceNo || "",
         date: item.date || "",
-        category: item.category || "Raw Feed & Supplies",
+        category: item.category || "Animal Feed Shop",
         items: item.items || [],
         subtotal: Number(item.subtotal || 0),
         grandTotal: Number(item.grandTotal || item.total || 0),
@@ -214,6 +288,7 @@ export const syncPurchases = asyncHandler(async (req, res) => {
     });
 
     await record.update({
+      vendorId: item.vendorId || record.vendorId,
       vendorName: item.vendorName || record.vendorName,
       items: item.items || record.items,
       grandTotal: Number(item.grandTotal || item.total || record.grandTotal),
@@ -241,10 +316,22 @@ export const syncProducts = asyncHandler(async (req, res) => {
   const list = Array.isArray(req.body) ? req.body : req.body.products || [];
   const incomingIds = [];
 
+  const buildExtra = (old = {}, item, stock) => ({
+    ...old,
+    stock,
+    openingStock: Number(item.openingStock ?? old.openingStock ?? 0),
+    inwardStock: Number(item.inwardStock ?? old.inwardStock ?? 0),
+    outwardStock: Number(item.outwardStock ?? old.outwardStock ?? 0),
+    reservedStock: Number(item.reservedStock ?? old.reservedStock ?? 0),
+    minStock: Number(item.minStock ?? old.minStock ?? 20),
+  });
+
   for (const item of list) {
     const productId = String(item.productId || item.id || "");
     if (!productId) continue;
     incomingIds.push(productId);
+
+    const itemStock = Number(item.stock ?? item.currentStock ?? 0);
 
     const [record] = await Product.findOrCreate({
       where: { productId },
@@ -259,24 +346,56 @@ export const syncProducts = asyncHandler(async (req, res) => {
         sellingPrice: Number(item.sellingPrice || item.price || 0),
         gstRate: Number(item.gstRate || 18),
         description: item.description || "",
+        extraData: buildExtra({}, item, itemStock),
       },
     });
 
     await record.update({
       name: item.name || record.name,
       category: item.category || record.category,
+      unit: item.unit || record.unit,
+      sku: item.sku ?? record.sku,
+      hsnCode: item.hsnCode ?? record.hsnCode,
       purchasePrice: Number(item.purchasePrice ?? record.purchasePrice),
       sellingPrice: Number(item.sellingPrice || item.price || record.sellingPrice),
       gstRate: Number(item.gstRate ?? record.gstRate),
       description: item.description || record.description,
+      extraData: buildExtra(record.extraData || {}, item, itemStock),
     });
+
+    // Inventory row: nahi hai to CREATE, hai to UPDATE
+    const [inv, invCreated] = await Inventory.findOrCreate({
+      where: { productId },
+      defaults: {
+        productId,
+        productName: record.name,
+        category: record.category,
+        unit: record.unit,
+        currentStock: itemStock,
+        minStockAlert: Number(item.minStock ?? 10),
+        warehouseLocation: item.warehouseLocation || "Main Warehouse - Bay 01",
+      },
+    });
+
+    if (!invCreated) {
+      await inv.update({
+        productName: record.name,
+        category: record.category,
+        unit: record.unit,
+        currentStock: itemStock,
+        minStockAlert: Number(item.minStock ?? inv.minStockAlert),
+        lastUpdated: new Date(),
+      });
+    }
   }
 
-  // Delete products that were removed from the catalogue
+  // Catalogue se hataye gaye products (+ unki inventory) delete
   if (incomingIds.length > 0) {
     await Product.destroy({ where: { productId: { [Op.notIn]: incomingIds } } });
+    await Inventory.destroy({ where: { productId: { [Op.notIn]: incomingIds } } });
   } else if (Array.isArray(req.body) && req.body.length === 0) {
     await Product.destroy({ where: {} });
+    await Inventory.destroy({ where: {} });
   }
 
   const all = await Product.findAll({ order: [["createdAt", "DESC"]] });
@@ -288,47 +407,48 @@ export const syncProducts = asyncHandler(async (req, res) => {
  */
 export const syncInventory = asyncHandler(async (req, res) => {
   const list = Array.isArray(req.body) ? req.body : req.body.inventory || [];
-  const incomingIds = [];
 
   for (const item of list) {
     const productId = String(item.productId || item.id || "");
     if (!productId) continue;
-    incomingIds.push(productId);
+
+    // Product catalogue me hona zaroori hai, warna phantom rows ban jaati hain
+    const prod = await Product.findOne({ where: { productId } });
+    if (!prod) continue;
+
+    const invStock = Number(item.stock ?? item.currentStock ?? 0);
 
     const [record] = await Inventory.findOrCreate({
       where: { productId },
       defaults: {
         productId,
-        productName: item.productName || item.name || "Product",
-        category: item.category || "General",
-        unit: item.unit || "Bags",
-        currentStock: Number(item.stock ?? item.currentStock ?? 0),
+        productName: prod.name,
+        category: prod.category,
+        unit: prod.unit,
+        currentStock: invStock,
         minStockAlert: Number(item.minStockAlert || 10),
         warehouseLocation: item.warehouseLocation || "Main Warehouse",
       },
     });
 
     await record.update({
-      currentStock: Number(item.stock ?? item.currentStock ?? record.currentStock),
+      currentStock: invStock,
       minStockAlert: Number(item.minStockAlert ?? record.minStockAlert),
       warehouseLocation: item.warehouseLocation || record.warehouseLocation,
+      lastUpdated: new Date(),
     });
+
+    prod.extraData = { ...(prod.extraData || {}), stock: invStock };
+    prod.changed("extraData", true);
+    await prod.save();
   }
 
-  // Delete inventory items that were removed
-  if (incomingIds.length > 0) {
-    await Inventory.destroy({ where: { productId: { [Op.notIn]: incomingIds } } });
-  } else if (Array.isArray(req.body) && req.body.length === 0) {
-    await Inventory.destroy({ where: {} });
-  }
-
+  // NOTE: yahan jaan-boojhkar delete nahi hai. Inventory row product ke saath hi hatti hai.
   const all = await Inventory.findAll({ order: [["productName", "ASC"]] });
   return ApiResponse.success(res, all.map((i) => i.toJSON()), "Inventory saved in MySQL");
 });
 
-/**
- * Sync / Save Expo Leads to MySQL
- */
+
 export const syncExpoLeads = asyncHandler(async (req, res) => {
   const list = Array.isArray(req.body) ? req.body : req.body.expoLeads || [];
   const incomingIds = [];

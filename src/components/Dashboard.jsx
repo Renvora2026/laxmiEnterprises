@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   TrendingUp, AlertTriangle, Users, IndianRupee, Package, Boxes,
-  Download, Sparkles
+  Download
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis,
@@ -49,11 +49,6 @@ export default function Dashboard({ clients = [], products = [], inventory = [],
   const lowStockItems = products.filter(p => Number(p.stock) <= Number(p.minStock));
   const totalWarehouseUnits = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
 
-  // Time-aware greeting
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  const firstName = adminProfile?.name ? adminProfile.name.split(" ")[0] : "Admin";
-
   // Total dynamic revenue calculated from invoices
   const totalRevenueNumber = (invoices || []).reduce((sum, inv) => sum + Number(inv.grandTotal || inv.total || 0), 0);
   const formattedRevenue = `₹${totalRevenueNumber.toLocaleString("en-IN")}`;
@@ -69,28 +64,6 @@ export default function Dashboard({ clients = [], products = [], inventory = [],
 
   return (
     <div className="page">
-      {/* EXECUTIVE WELCOME HERO BANNER */}
-      <div className="welcome-hero-banner">
-        <div className="welcome-hero-content">
-          <div className="welcome-hero-pill">
-            <span className="live-pulse-dot" />
-            <span>Enterprise ERP 2026.1 • Live MySQL Engine</span>
-          </div>
-          <h2 className="welcome-hero-title">
-            Good {greeting}, <span className="welcome-hero-name">{firstName}</span>
-          </h2>
-          <p className="welcome-hero-subtitle">
-            Overview of your enterprise operations, live client receivables, warehouse inventory balances and sales transactions.
-          </p>
-        </div>
-        <div className="welcome-hero-actions">
-          <button type="button" className="hero-btn-primary" onClick={onExportMaster}>
-            <Download size={15} /> Export Master Backup
-          </button>
-        </div>
-        <div className="welcome-hero-glow" />
-      </div>
-
       <div className="page-actions" style={{ flexWrap: "wrap", gap: 10 }}>
         <span className="date-pill">Fiscal Year 2026-27 • Corporate Overview</span>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

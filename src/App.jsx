@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 import Layout from "./components/Layout";
 import Dashboard from "./components/Dashboard";
 import ClientsPage from "./components/ClientsPage";
+import VendorsPage from "./components/VendorsPage";
 import InvoicesPage from "./components/InvoicesPage";
 import PurchasesPage from "./components/PurchasesPage";
 import ExpoPage from "./components/ExpoPage";
@@ -42,6 +43,24 @@ export default function App() {
     setClients(newClients);
     localStorage.setItem("le_clients", JSON.stringify(newClients));
     erpApi.syncClients(newClients).catch((e) => console.warn("Failed to sync clients to DB:", e.message));
+  };
+
+  // Vendor Directory state with persistence & MySQL sync (no hardcoded dummy data)
+  const [vendors, setVendors] = useState(() => {
+    const saved = localStorage.getItem("le_vendors");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const saveVendors = (newVendors) => {
+    setVendors(newVendors);
+    localStorage.setItem("le_vendors", JSON.stringify(newVendors));
+    erpApi.syncVendors(newVendors).catch((e) => console.warn("Failed to sync vendors to DB:", e.message));
   };
 
   // Invoices state with persistence & MySQL sync
@@ -110,10 +129,92 @@ export default function App() {
     return [];
   });
 
+  // Server se products + inventory dobara load (single source of truth = MySQL)
+  const refreshStockData = async () => {
+    try {
+      const res = await erpApi.getAllData();
+      const data = res.data;
+      if (Array.isArray(data?.products)) {
+        setProducts(data.products);
+        localStorage.setItem("le_products", JSON.stringify(data.products));
+      }
+      if (Array.isArray(data?.inventory)) {
+        setInventory(data.inventory);
+        localStorage.setItem("le_inventory", JSON.stringify(data.inventory));
+      }
+    } catch (e) {
+      console.warn("Failed to refresh stock data:", e.message);
+    }
+  };
+
   const saveProducts = (newProducts) => {
     setProducts(newProducts);
     localStorage.setItem("le_products", JSON.stringify(newProducts));
-    erpApi.syncProducts(newProducts).catch((e) => console.warn("Failed to sync products to DB:", e.message));
+
+    // Automatically reflect and synchronize products with inventory immediately in state
+    setInventory((prevInv) => {
+      const prodMap = new Map((newProducts || []).map((p) => [String(p.id || p.productId), p]));
+      const existingProductIds = new Set();
+
+      const updatedExisting = (prevInv || [])
+        .filter((inv) => prodMap.has(String(inv.productId || inv.id || inv.sku)))
+        .map((inv) => {
+          const pId = String(inv.productId || inv.id || inv.sku);
+          existingProductIds.add(pId);
+          const p = prodMap.get(pId);
+          const rawStock = Number(p.stock ?? p.currentStock ?? 0);
+          return {
+            ...inv,
+            product: p.name,
+            productName: p.name,
+            sku: p.sku || inv.sku || pId,
+            category: p.category || inv.category,
+            unit: p.unit || inv.unit,
+            stock: rawStock,
+            currentStock: rawStock,
+            minStockAlert: Number(p.minStock ?? inv.minStockAlert ?? 10),
+            status: rawStock <= 0 ? "Out of Stock" : rawStock <= Number(p.minStock ?? inv.minStockAlert ?? 10) ? "Low Stock" : "In Stock",
+          };
+        });
+
+      const newEntries = [];
+      (newProducts || []).forEach((p) => {
+        const pId = String(p.id || p.productId);
+        if (!existingProductIds.has(pId)) {
+          const rawStock = Number(p.stock ?? p.currentStock ?? 0);
+          const rawIn = Number(p.inwardStock ?? p.openingStock ?? rawStock);
+          const rawOut = Number(p.outwardStock ?? 0);
+          const minAlert = Number(p.minStock ?? 10);
+          newEntries.push({
+            id: pId,
+            productId: pId,
+            product: p.name,
+            productName: p.name,
+            sku: p.sku || pId,
+            category: p.category || "General",
+            unit: p.unit || "Bags",
+            in: rawIn,
+            out: rawOut,
+            stock: rawStock,
+            currentStock: rawStock,
+            minStockAlert: minAlert,
+            warehouseLocation: p.warehouseLocation || "Main Warehouse - Bay 01",
+            location: p.warehouseLocation || "Main Warehouse - Bay 01",
+            status: rawStock <= 0 ? "Out of Stock" : rawStock <= minAlert ? "Low Stock" : "In Stock",
+            lastUpdated: new Date().toISOString(),
+          });
+        }
+      });
+
+      const merged = [...newEntries, ...updatedExisting];
+      localStorage.setItem("le_inventory", JSON.stringify(merged));
+      return merged;
+    });
+
+    erpApi
+      .syncProducts(newProducts)
+      .then(refreshStockData)
+      .catch((e) => console.warn("Failed to sync products to DB:", e.message));
   };
 
   // Inventory state with persistence & MySQL sync
@@ -131,7 +232,10 @@ export default function App() {
   const saveInventory = (newInventory) => {
     setInventory(newInventory);
     localStorage.setItem("le_inventory", JSON.stringify(newInventory));
-    erpApi.syncInventory(newInventory).catch((e) => console.warn("Failed to sync inventory to DB:", e.message));
+    erpApi
+      .syncInventory(newInventory)
+      .then(refreshStockData)
+      .catch((e) => console.warn("Failed to sync inventory to DB:", e.message));
   };
 
   // Admin Profile state (synced with authenticated user from MySQL)
@@ -288,55 +392,40 @@ export default function App() {
   };
 
   // Cross-Entity Relational Cascade Handlers:
-  // 1. Invoice creation cascades to Inventory (decrement stock) & Client Ledger (increment orders, revenue, outstanding)
+  // 1. Invoice creation cascades to Products & Client Ledger (Backend syncs MySQL inventory)
   const handleCreateInvoiceCascade = (newInvoice) => {
     const updatedInvoices = [newInvoice, ...invoices];
     saveInvoices(updatedInvoices);
 
-    // Decrement stock for all itemized products in the invoice
+    // Products update karo; Inventory backend (syncProducts) khud sync karta hai
     if (Array.isArray(newInvoice.items) && newInvoice.items.length > 0) {
       const updatedProducts = products.map((prod) => {
-        const item = newInvoice.items.find(
-          (it) => String(it.productId) === String(prod.id) || it.description?.toLowerCase() === prod.name?.toLowerCase()
-        );
+        const item = newInvoice.items.find((it) => String(it.productId) === String(prod.id));
         if (item) {
           const qty = Number(item.qty) || 0;
           const currentOut = Number(prod.outwardStock || 0);
-          const currentStock = Number(prod.stock || 0);
+          const currentStock = Number(prod.stock || prod.currentStock || 0);
+          const newStock = Math.max(0, currentStock - qty);
           return {
             ...prod,
-            outwardStock: currentOut + qty,
-            stock: Math.max(0, currentStock - qty),
+            outwardStock: currentOut + (currentStock - newStock),
+            stock: newStock,
+            currentStock: newStock,
           };
         }
         return prod;
       });
       saveProducts(updatedProducts);
-
-      const updatedInventory = inventory.map((inv) => {
-        const item = newInvoice.items.find(
-          (it) => String(it.productId) === String(inv.productId) || it.description?.toLowerCase() === inv.productName?.toLowerCase()
-        );
-        if (item) {
-          const qty = Number(item.qty) || 0;
-          const cur = Number(inv.stock ?? inv.currentStock ?? 0);
-          return {
-            ...inv,
-            stock: Math.max(0, cur - qty),
-            currentStock: Math.max(0, cur - qty),
-          };
-        }
-        return inv;
-      });
-      saveInventory(updatedInventory);
     }
 
-    // Update Client's commercial ledger
     if (newInvoice.clientId || newInvoice.clientName) {
       const invTotal = Number(newInvoice.total || newInvoice.grandTotal || 0);
-      const balanceDue = newInvoice.balanceDue !== undefined 
-        ? Number(newInvoice.balanceDue) 
-        : (newInvoice.status === "Paid" ? 0 : invTotal);
+      const balanceDue =
+        newInvoice.balanceDue !== undefined
+          ? Number(newInvoice.balanceDue)
+          : newInvoice.status === "Paid"
+          ? 0
+          : invTotal;
 
       const updatedClients = clients.map((cl) => {
         if (cl.id === newInvoice.clientId || cl.name === newInvoice.clientName) {
@@ -354,7 +443,7 @@ export default function App() {
     }
   };
 
-  // 2. Inward Purchase creation cascades to Product & Inventory (increment stock)
+  // 2. Inward Purchase creation cascades to Product & Vendor Ledger (Backend syncs MySQL inventory)
   const handleCreatePurchaseCascade = (newPurchase) => {
     const updatedPurchases = [newPurchase, ...purchases];
     savePurchases(updatedPurchases);
@@ -363,112 +452,53 @@ export default function App() {
     const qty = Number(newPurchase.inwardQty || newPurchase.quantity || 1);
     const purchaseRate = Number(newPurchase.unitRate || newPurchase.rate || 0);
 
-    if (prodId || newPurchase.itemDescription) {
-      const itemDesc = (newPurchase.itemDescription || newPurchase.productName || "Inward Goods").trim();
-      let foundInProd = false;
-
-      let updatedProducts = products.map((prod) => {
-        const matches = (prodId && String(prod.id) === String(prodId)) || 
-                        (itemDesc && prod.name?.toLowerCase().trim() === itemDesc.toLowerCase());
-        if (matches) {
-          foundInProd = true;
-          const rawIn = Number(prod.inwardStock);
-          const rawStock = Number(prod.stock);
-          const baseIn = !isNaN(rawIn) && rawIn > 0 ? rawIn : (!isNaN(rawStock) && rawStock > 0 ? rawStock : 0);
-          const baseStock = !isNaN(rawStock) ? rawStock : baseIn;
-
-          const newIn = baseIn + qty;
-          const newStock = baseStock + qty;
-
+    if (prodId) {
+      const updatedProducts = products.map((prod) => {
+        if (String(prod.id) === String(prodId)) {
+          const rawStock = Number(prod.stock || prod.currentStock || 0);
+          const rawIn = Number(prod.inwardStock || 0);
           const updatedProd = {
             ...prod,
-            inwardStock: newIn,
-            stock: newStock,
+            inwardStock: rawIn + qty,
+            stock: rawStock + qty,
+            currentStock: rawStock + qty,
           };
-
-          // Update cost/purchase price from procurement voucher if provided
           if (purchaseRate > 0) {
             updatedProd.purchasePrice = purchaseRate;
             updatedProd.costPrice = purchaseRate;
           }
-
-          // Ensure unit selling price is never undefined or NaN
-          if (!updatedProd.price && !updatedProd.sellingPrice) {
-            updatedProd.price = purchaseRate > 0 ? Math.round(purchaseRate * 1.25) : 1000;
-            updatedProd.sellingPrice = updatedProd.price;
-          }
-
           return updatedProd;
         }
         return prod;
       });
-
-      // If product does NOT exist in catalogue yet, add it automatically
-      let effectiveProdId = prodId;
-      if (!foundInProd && itemDesc) {
-        const nextPNum = updatedProducts.length + 1;
-        effectiveProdId = prodId || `PR-${String(nextPNum).padStart(3, "0")}`;
-        const cat = newPurchase.category === "Dairy" ? "Dairy Milk" : newPurchase.category === "Farmers" ? "Farmer Direct" : "Animal Feed";
-        const newProduct = {
-          id: effectiveProdId,
-          name: itemDesc,
-          category: cat,
-          purchasePrice: purchaseRate > 0 ? purchaseRate : 750,
-          costPrice: purchaseRate > 0 ? purchaseRate : 750,
-          sellingPrice: purchaseRate > 0 ? Math.round(purchaseRate * 1.25) : 1000,
-          price: purchaseRate > 0 ? Math.round(purchaseRate * 1.25) : 1000,
-          openingStock: 0,
-          inwardStock: qty,
-          outwardStock: 0,
-          reservedStock: 0,
-          stock: qty,
-          minStock: 10,
-          unit: newPurchase.unit || (cat === "Dairy Milk" ? "Liters" : cat === "Farmer Direct" ? "Tonnes" : "Bags")
-        };
-        updatedProducts = [newProduct, ...updatedProducts];
-      }
       saveProducts(updatedProducts);
+    }
 
-      let foundInInv = false;
-      let updatedInventory = inventory.map((inv) => {
-        const matches = (effectiveProdId && String(inv.productId) === String(effectiveProdId)) || 
-                        (itemDesc && (inv.product || inv.productName)?.toLowerCase().trim() === itemDesc.toLowerCase());
-        if (matches) {
-          foundInInv = true;
-          const rawCur = Number(inv.stock ?? inv.currentStock ?? inv.in ?? 0);
-          const newStock = rawCur + qty;
+    if (newPurchase.vendorId || newPurchase.vendorName) {
+      const pTotal = Number(newPurchase.total || newPurchase.totalAmount || 0);
+      const pBal = Number(
+        newPurchase.balanceDue !== undefined
+          ? newPurchase.balanceDue
+          : newPurchase.paymentStatus === "Paid"
+          ? 0
+          : pTotal
+      );
+
+      const updatedVendors = vendors.map((v) => {
+        if (
+          (newPurchase.vendorId && String(v.vendorId || v.id) === String(newPurchase.vendorId)) ||
+          (newPurchase.vendorName && v.name.toLowerCase() === newPurchase.vendorName.toLowerCase())
+        ) {
           return {
-            ...inv,
-            product: itemDesc,
-            productName: itemDesc,
-            sku: effectiveProdId || inv.sku,
-            stock: newStock,
-            currentStock: newStock,
-            in: (Number(inv.in) || rawCur) + qty,
+            ...v,
+            totalOrders: (Number(v.totalOrders) || 0) + 1,
+            totalPurchases: (Number(v.totalPurchases) || 0) + pTotal,
+            outstandingPayable: (Number(v.outstandingPayable) || 0) + pBal,
           };
         }
-        return inv;
+        return v;
       });
-
-      // If inventory item does not exist, append it
-      if (!foundInInv && itemDesc) {
-        const nextInvNum = updatedInventory.length + 1;
-        const newInvItem = {
-          id: `INV-${String(nextInvNum).padStart(3, "0")}`,
-          productId: effectiveProdId,
-          product: itemDesc,
-          productName: itemDesc,
-          sku: effectiveProdId,
-          in: qty,
-          out: 0,
-          stock: qty,
-          currentStock: qty,
-          status: qty <= 0 ? "Out of Stock" : qty <= 10 ? "Low Stock" : "In Stock",
-          location: "Main Warehouse - Bay 01"
-        };
-        updatedInventory = [newInvItem, ...updatedInventory];
-      }
-      saveInventory(updatedInventory);
+      saveVendors(updatedVendors);
     }
   };
 
@@ -537,6 +567,10 @@ export default function App() {
           if (Array.isArray(data.clients)) {
             setClients(data.clients);
             localStorage.setItem("le_clients", JSON.stringify(data.clients));
+          }
+          if (Array.isArray(data.vendors)) {
+            setVendors(data.vendors);
+            localStorage.setItem("le_vendors", JSON.stringify(data.vendors));
           }
           if (Array.isArray(data.invoices)) {
             setInvoices(data.invoices);
@@ -646,12 +680,22 @@ export default function App() {
             } 
           />
           <Route 
+            path="/vendors" 
+            element={
+              <VendorsPage 
+                vendors={vendors} 
+                onSaveVendors={saveVendors}
+              />
+            } 
+          />
+          <Route 
             path="/purchases" 
             element={
               <PurchasesPage 
                 purchases={purchases} 
                 onSavePurchases={savePurchases} 
                 onCreatePurchase={handleCreatePurchaseCascade}
+                vendors={vendors}
                 clients={clients} 
                 products={products}
                 company={company} 
@@ -715,6 +759,8 @@ export default function App() {
                 inventory={inventory} 
                 onSaveInventory={saveInventory}
                 products={products}
+                onSaveProducts={saveProducts}
+                onRefresh={refreshStockData}
               />
             } 
           />

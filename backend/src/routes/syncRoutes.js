@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getAllData,
   syncClients,
+  syncVendors,
   syncInvoices,
   syncPurchases,
   syncProducts,
@@ -14,6 +15,7 @@ const router = Router();
 
 router.get("/all", getAllData);
 router.post("/clients", syncClients);
+router.post("/vendors", syncVendors);
 router.post("/invoices", syncInvoices);
 router.post("/purchases", syncPurchases);
 router.post("/products", syncProducts);

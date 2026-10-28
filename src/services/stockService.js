@@ -21,8 +21,11 @@ export function calculateProductStock(product = {}, inventoryItem = null) {
   const invIn = inventoryItem && !isNaN(Number(inventoryItem.in)) ? Number(inventoryItem.in) : NaN;
   const invStock = inventoryItem && !isNaN(Number(inventoryItem.stock ?? inventoryItem.currentStock)) ? Number(inventoryItem.stock ?? inventoryItem.currentStock) : NaN;
 
+  const hasExplicitInward =
+    product.inwardStock !== undefined && product.inwardStock !== null && product.inwardStock !== "" && !isNaN(pIn);
+
   let inwardStock = 0;
-  if (!isNaN(pIn) && pIn > 0) {
+  if (hasExplicitInward) {
     inwardStock = pIn;
   } else if (!isNaN(invIn) && invIn > 0) {
     inwardStock = invIn;
@@ -30,10 +33,6 @@ export function calculateProductStock(product = {}, inventoryItem = null) {
     inwardStock = pStock;
   } else if (!isNaN(invStock) && invStock > 0) {
     inwardStock = invStock;
-  } else if (!isNaN(pIn)) {
-    inwardStock = pIn;
-  } else if (!isNaN(pStock)) {
-    inwardStock = pStock;
   }
   inwardStock = Math.max(0, inwardStock);
 

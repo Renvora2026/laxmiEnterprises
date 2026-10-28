@@ -272,11 +272,24 @@ export default function InvoiceModal({
       if (!payVal.isValid) newErrors.paidAmount = payVal.error;
     }
 
-    // Itemized lines validation
+    // Itemized lines validation — strictly enforce catalogue product selection
     const lineItemVal = validateInvoiceItems(items);
-    if (!lineItemVal.isValid) {
-      newErrors.items = lineItemVal.generalError || "Please verify product quantities and rates.";
-      setItemErrors(lineItemVal.itemErrors);
+    let hasMissingProduct = false;
+    const customItemErrors = items.map((it, idx) => {
+      const errs = { ...(lineItemVal.itemErrors[idx] || {}) };
+      if (!it.productId) {
+        errs.productId = "Please select a product from the catalogue dropdown.";
+        errs.description = "Product must be selected from the catalogue.";
+        hasMissingProduct = true;
+      }
+      return errs;
+    });
+
+    if (!lineItemVal.isValid || hasMissingProduct) {
+      newErrors.items = hasMissingProduct
+        ? "All line items must be selected from existing catalogue products."
+        : (lineItemVal.generalError || "Please verify product quantities and rates.");
+      setItemErrors(customItemErrors);
     } else {
       setItemErrors([]);
     }
@@ -634,31 +647,34 @@ export default function InvoiceModal({
                           <td style={{ padding: "8px" }}>
                             {products && products.length > 0 ? (
                               <select
-                                className={`form-select ${rowErrs.description ? "is-invalid" : ""}`}
+                                className={`form-select ${rowErrs.description || rowErrs.productId ? "is-invalid" : ""}`}
                                 style={{ height: 34, fontSize: "0.82rem", padding: "2px 8px", width: "100%", fontWeight: 600 }}
-                                value={it.productId || (selectedProd ? selectedProd.id : "")}
+                                value={it.productId || ""}
                                 onChange={(e) => handleSelectProduct(idx, e.target.value)}
                                 required
                               >
-                                <option value="">-- Select Product from Catalog --</option>
+                                <option value="">-- Select Product from Catalogue --</option>
                                 {products.map((p) => {
                                   const pStock = Number(p.stock ?? p.currentStock ?? 0);
                                   return (
                                     <option key={p.id} value={p.id}>
-                                      {p.name} ({p.id}) — ₹{Number(p.sellingPrice || p.price || 0).toLocaleString("en-IN")} | Stock: {pStock} {p.unit || 'units'}
+                                      {p.name} [{p.id}] — ₹{Number(p.sellingPrice || p.price || 0).toLocaleString("en-IN")} | Stock: {pStock} {p.unit || 'units'}
                                     </option>
                                   );
                                 })}
                               </select>
                             ) : (
-                              <input
-                                className={`form-input ${rowErrs.description ? "is-invalid" : ""}`}
-                                style={{ height: 34, fontSize: "0.82rem", padding: "4px 8px" }}
-                                value={it.description}
-                                onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                                placeholder="Enter product name"
-                                required
-                              />
+                              <div style={{
+                                padding: "6px 10px",
+                                background: "rgba(239, 68, 68, 0.08)",
+                                border: "1px solid rgba(239, 68, 68, 0.2)",
+                                borderRadius: 6,
+                                color: "#ef4444",
+                                fontSize: "0.78rem",
+                                fontWeight: 600
+                              }}>
+                                ⚠️ No products in catalogue. Add products first.
+                              </div>
                             )}
 
                             {/* Linked Product Status & Stock Indicator */}

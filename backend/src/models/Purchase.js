@@ -25,6 +25,10 @@ Purchase.init(
       allowNull: false,
       unique: true,
     },
+    vendorId: {
+      type: DataTypes.STRING(60),
+      defaultValue: "",
+    },
     vendorName: {
       type: DataTypes.STRING(200),
       allowNull: false,

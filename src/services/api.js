@@ -64,6 +64,7 @@ export const erpApi = {
   // Master Synchronization (MySQL Database <-> Frontend)
   getAllData: () => apiClient.get("/sync/all"),
   syncClients: (clients) => apiClient.post("/sync/clients", clients),
+  syncVendors: (vendors) => apiClient.post("/sync/vendors", vendors),
   syncInvoices: (invoices) => apiClient.post("/sync/invoices", invoices),
   syncPurchases: (purchases) => apiClient.post("/sync/purchases", purchases),
   syncProducts: (products) => apiClient.post("/sync/products", products),
@@ -88,6 +89,12 @@ export const erpApi = {
   updateClient: (id, data) => apiClient.put(`/clients/${id}`, data),
   deleteClient: (id) => apiClient.delete(`/clients/${id}`),
 
+  getVendors: (params) => apiClient.get("/vendors", { params }),
+  getVendor: (id) => apiClient.get(`/vendors/${id}`),
+  createVendor: (data) => apiClient.post("/vendors", data),
+  updateVendor: (id, data) => apiClient.put(`/vendors/${id}`, data),
+  deleteVendor: (id) => apiClient.delete(`/vendors/${id}`),
+
   getProducts: () => apiClient.get("/products"),
   createProduct: (data) => apiClient.post("/products", data),
   updateProduct: (id, data) => apiClient.put(`/products/${id}`, data),
@@ -95,6 +102,8 @@ export const erpApi = {
 
   getInventory: () => apiClient.get("/inventory"),
   updateStock: (productId, data) => apiClient.put(`/inventory/${productId}`, data),
+  adjustStock: (productId, adjustment, warehouseLocation, reason) =>
+    apiClient.post(`/inventory/${productId}/adjust`, { adjustment, warehouseLocation, reason }),
 
   getPurchases: () => apiClient.get("/purchases"),
   createPurchase: (data) => apiClient.post("/purchases", data),

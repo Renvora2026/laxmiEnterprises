@@ -1,30 +1,74 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
-  Boxes, Plus, Search, Filter, Pencil, Trash2, Download, AlertTriangle, Eye,
-  ShoppingCart, Warehouse, Barcode, CheckCircle2, X
+  Boxes, Plus, Search, Trash2, AlertTriangle, Eye,
+  ShoppingCart, Warehouse, Barcode, CheckCircle2, X, TrendingUp, TrendingDown, Pencil
 } from "lucide-react";
 import InventoryModal from "./InventoryModal";
 import InventoryViewDrawer from "./InventoryViewDrawer";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import ExportMenu from "./ExportMenu";
 import { downloadCSV } from "../utils/exportUtils";
+import { erpApi } from "../services/api";
 
-export default function InventoryPage({ inventory, onSaveInventory, products }) {
+export default function InventoryPage({ inventory, onSaveInventory, products, onSaveProducts, onRefresh }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingInventory, setEditingInventory] = useState(null);
   const [deletingInventory, setDeletingInventory] = useState(null);
   const [viewingInventory, setViewingInventory] = useState(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState(null);
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Automatically sync fresh stock telemetry on page mount
+  useEffect(() => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  }, []);
+
+  // Combine registered inventory with catalogue products so all products are automatically present
+  const displayInventory = useMemo(() => {
+    const invMap = new Map((inventory || []).map(i => [String(i.productId || i.id || i.sku), i]));
+    const result = [...(inventory || [])];
+
+    (products || []).forEach(p => {
+      const pId = String(p.id || p.productId);
+      if (!invMap.has(pId)) {
+        const rawStock = Number(p.stock ?? p.currentStock ?? 0);
+        const rawIn = Number(p.inwardStock ?? p.openingStock ?? rawStock);
+        const rawOut = Number(p.outwardStock ?? 0);
+        const minAlert = Number(p.minStock ?? 10);
+        result.unshift({
+          id: pId,
+          productId: pId,
+          product: p.name,
+          productName: p.name,
+          sku: p.sku || pId,
+          category: p.category || "General",
+          unit: p.unit || "Bags",
+          in: rawIn,
+          out: rawOut,
+          stock: rawStock,
+          currentStock: rawStock,
+          minStockAlert: minAlert,
+          warehouseLocation: p.warehouseLocation || "Main Warehouse - Bay 01",
+          location: p.warehouseLocation || "Main Warehouse - Bay 01",
+          status: rawStock <= 0 ? "Out of Stock" : rawStock <= minAlert ? "Low Stock" : "In Stock",
+        });
+      }
+    });
+
+    return result;
+  }, [inventory, products]);
+
   const nextId = useMemo(() => {
-    const ids = inventory
+    const ids = displayInventory
       .map(i => {
         const match = i.id.match(/\d+/);
         return match ? parseInt(match[0], 10) : 0;
@@ -32,10 +76,10 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
       .filter(n => !isNaN(n));
     const maxNum = ids.length ? Math.max(...ids) : 0;
     return `INV-${String(maxNum + 1).padStart(3, "0")}`;
-  }, [inventory]);
+  }, [displayInventory]);
 
   const filtered = useMemo(() => {
-    return inventory.filter(i => {
+    return displayInventory.filter(i => {
       const matchesStatus = statusFilter === "All" || i.status === statusFilter;
       const q = search.toLowerCase().trim();
       const matchedProd = (products || []).find(p => String(p.id) === String(i.productId || i.id || i.sku)) || {};
@@ -51,66 +95,68 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
       );
       return matchesStatus && matchesSearch;
     });
-  }, [inventory, products, search, statusFilter]);
+  }, [displayInventory, products, search, statusFilter]);
 
-  const totalIn = useMemo(() => inventory.reduce((sum, i) => {
+  const totalIn = useMemo(() => displayInventory.reduce((sum, i) => {
     const matchedProd = (products || []).find(p => String(p.id) === String(i.productId || i.id || i.sku));
     const stockIn = Number(i.in ?? i.inwardStock ?? matchedProd?.inwardStock ?? 0);
     return sum + stockIn;
-  }, 0), [inventory, products]);
+  }, 0), [displayInventory, products]);
 
-  const totalOut = useMemo(() => inventory.reduce((sum, i) => {
+  const totalOut = useMemo(() => displayInventory.reduce((sum, i) => {
     const matchedProd = (products || []).find(p => String(p.id) === String(i.productId || i.id || i.sku));
     const stockOut = Number(i.out ?? i.outwardStock ?? matchedProd?.outwardStock ?? 0);
     return sum + stockOut;
-  }, 0), [inventory, products]);
+  }, 0), [displayInventory, products]);
 
-  const totalBalance = useMemo(() => inventory.reduce((sum, i) => {
+  const totalBalance = useMemo(() => displayInventory.reduce((sum, i) => {
     const matchedProd = (products || []).find(p => String(p.id) === String(i.productId || i.id || i.sku));
     const balance = matchedProd && matchedProd.stock !== undefined ? Number(matchedProd.stock) : Number(i.stock ?? i.currentStock ?? 0);
     return sum + balance;
-  }, 0), [inventory, products]);
+  }, 0), [displayInventory, products]);
 
-  const lowCount = useMemo(() => inventory.filter(i => {
+  const lowCount = useMemo(() => displayInventory.filter(i => {
     const matchedProd = (products || []).find(p => String(p.id) === String(i.productId || i.id || i.sku));
     const balance = matchedProd && matchedProd.stock !== undefined ? Number(matchedProd.stock) : Number(i.stock ?? i.currentStock ?? 0);
-    return i.status === "Low Stock" || i.status === "Out of Stock" || balance <= 10;
-  }).length, [inventory, products]);
+    return i.status === "Low Stock" || i.status === "Out of Stock" || balance <= Number(i.minStockAlert ?? 10);
+  }).length, [displayInventory, products]);
 
   const handleOpenAdd = () => {
-    setEditingInventory(null);
+    setSelectedProductForModal(null);
     setModalOpen(true);
   };
 
-  const handleOpenEdit = (item) => {
-    setEditingInventory(item);
+  const handleOpenMovement = (item) => {
+    const prodId = item.productId || item.id || item.sku;
+    setSelectedProductForModal(prodId);
     setModalOpen(true);
   };
 
-  const handleSaveInventory = (itemData) => {
-    if (editingInventory) {
-      const updated = inventory.map(i => i.id === editingInventory.id ? itemData : i);
-      onSaveInventory(updated);
-      showToast(`✓ Updated stock entry for ${itemData.product}!`);
-    } else {
-      const exists = inventory.some(i => i.id.toLowerCase() === itemData.id.toLowerCase());
-      if (exists) {
-        showToast(`⚠️ An inventory record with ID ${itemData.id} already exists.`);
-        return;
-      }
-      const updated = [itemData, ...inventory];
-      onSaveInventory(updated);
-      showToast(`✓ Recorded stock movement for ${itemData.product}!`);
+  /**
+   * handleStockMovement — called by InventoryModal on submit
+   * Calls backend /inventory/:productId/adjust then refetches fresh data
+   */
+  const handleStockMovement = async (movementData) => {
+    const { productId, productName, adjustment, movementType, quantity, warehouseLocation, reason } = movementData;
+    setLoading(true);
+    try {
+      await erpApi.adjustStock(productId, adjustment, warehouseLocation, reason);
+      if (onRefresh) await onRefresh();
+      showToast(`✓ Stock ${movementType === "inward" ? "increased" : "decreased"} by ${quantity} for ${productName}`);
+      setModalOpen(false);
+    } catch (err) {
+      console.warn("Stock adjust failed:", err.message);
+      showToast(`⚠ Stock update failed: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-    setModalOpen(false);
-    setEditingInventory(null);
   };
 
   const handleDeleteConfirm = () => {
     if (!deletingInventory) return;
     const updated = inventory.filter(i => i.id !== deletingInventory.id);
     onSaveInventory(updated);
-    showToast(`✓ Inventory entry ${deletingInventory.sku} removed.`);
+    showToast(`✓ Inventory entry removed.`);
     if (viewingInventory && viewingInventory.id === deletingInventory.id) {
       setViewingInventory(null);
     }
@@ -276,7 +322,7 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
                   const balance = Number(i.stock ?? i.currentStock ?? matchedProd.stock ?? 0);
                   const loc = i.location || i.warehouseLocation || "Warehouse A";
                   const isOut = i.status === "Out of Stock" || balance <= 0;
-                  const isLow = i.status === "Low Stock" || (balance > 0 && balance <= 10);
+                  const isLow = i.status === "Low Stock" || (balance > 0 && balance <= Number(i.minStockAlert ?? 10));
                   return (
                     <tr key={i.id}>
                       <td>
@@ -354,7 +400,7 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
                           >
                             <Eye size={14} />
                           </button>
-                          <button title="Edit Stock Record" onClick={() => handleOpenEdit(i)}>
+                          <button title="Record Stock Movement" onClick={() => handleOpenMovement(i)}>
                             <Pencil size={14} />
                           </button>
                           <button title="Delete Record" onClick={() => setDeletingInventory(i)}>
@@ -372,23 +418,22 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
       </div>
 
       <InventoryModal
-        key={editingInventory ? editingInventory.id : "new-inventory"}
+        key={selectedProductForModal || "new-inventory"}
         isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingInventory(null); }}
-        onSave={handleSaveInventory}
-        inventoryToEdit={editingInventory}
+        onClose={() => { setModalOpen(false); setSelectedProductForModal(null); }}
+        onSave={handleStockMovement}
         products={products}
-        nextId={nextId}
-        existingIds={inventory.map(i => i.id)}
+        initialProductId={selectedProductForModal}
+        showToast={showToast}
       />
 
       <DeleteConfirmModal
         isOpen={!!deletingInventory}
         onClose={() => setDeletingInventory(null)}
         onConfirm={handleDeleteConfirm}
-        title="Confirm Inventory Deletion"
-        message={deletingInventory ? `Are you sure you want to delete the stock movement ledger for ${deletingInventory.product} (${deletingInventory.sku})?` : ""}
-        details={deletingInventory ? `Entry shows ${deletingInventory.in} received, ${deletingInventory.out} dispatched, and ${deletingInventory.stock} balance units.` : ""}
+        title="Confirm Inventory Entry Deletion"
+        message={deletingInventory ? `Remove this stock movement record for ${deletingInventory.product || deletingInventory.productName}?` : ""}
+        details="This removes the log entry only. Actual stock balances are managed via new movement entries."
       />
 
       {/* SLIDE-OVER INSPECTION DRAWER & TELEMETRY */}
@@ -401,7 +446,7 @@ export default function InventoryPage({ inventory, onSaveInventory, products }) 
         products={products}
         onEdit={(item) => {
           setViewingInventory(null);
-          handleOpenEdit(item);
+          handleOpenMovement(item);
         }}
         onDelete={(item) => {
           setViewingInventory(null);

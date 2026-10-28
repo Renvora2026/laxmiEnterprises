@@ -18,7 +18,7 @@ export default function PurchaseModal({
   onSave,
   purchaseToEdit = null,
   nextId = "LE-PUR-2026-001",
-  clients = [],
+  vendors = [],
   products = [],
   company = {}
 }) {
@@ -37,6 +37,7 @@ export default function PurchaseModal({
 
       return {
         ...purchaseToEdit,
+        vendorId: purchaseToEdit.vendorId || "",
         category: purchaseToEdit.category || "Animal Feed Shop",
         vendorName: purchaseToEdit.vendorName || purchaseToEdit.name || "",
         contactPerson: purchaseToEdit.contactPerson || "",
@@ -200,20 +201,24 @@ export default function PurchaseModal({
     recalculateAmounts(form.inwardQty, rate, gst);
   };
 
-  const handleSelectSupplier = (supplierName) => {
-    const found = clients.find(c => c.name === supplierName);
+  const handleSelectVendor = (vendorIdentifier) => {
+    const found = vendors.find(v =>
+      String(v.vendorId || v.id) === String(vendorIdentifier) || v.name === vendorIdentifier
+    );
     if (!found) return;
 
     setForm(prev => ({
       ...prev,
+      vendorId: found.vendorId || found.id,
       vendorName: found.name,
       contactPerson: found.contactPerson || found.name,
       village: found.village || found.city || prev.village,
-      contact: found.contact || prev.contact
+      contact: found.phone || found.contact || prev.contact,
+      vendorGstin: found.gstin || prev.vendorGstin,
     }));
 
-    if (errors.vendorName || errors.contact) {
-      setErrors(prev => ({ ...prev, vendorName: null, contact: null }));
+    if (errors.vendorName || errors.contact || errors.vendorId) {
+      setErrors(prev => ({ ...prev, vendorName: null, contact: null, vendorId: null }));
     }
   };
 
@@ -243,6 +248,11 @@ export default function PurchaseModal({
 
   const validateForm = () => {
     const newErrors = {};
+
+    // Catalogue Product (Strict Catalogue Selection)
+    if (!form.productId) {
+      newErrors.productId = "Please select a product from the existing catalogue.";
+    }
 
     // Vendor / Supplier Name
     const vVal = validateRequiredText(form.vendorName, "Supplier / Farmer Name", 2);
@@ -461,21 +471,36 @@ export default function PurchaseModal({
                 Supplier / Farmer Information
               </div>
 
-              {clients && clients.length > 0 && (
-                <div className="form-group" style={{ marginBottom: 10 }}>
-                  <label style={{ fontSize: "0.78rem" }}>Quick Auto-Fill from Registered Suppliers / Accounts:</label>
+              {vendors && vendors.length > 0 ? (
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: "0.80rem", fontWeight: 700 }}>
+                    Select Supplier / Vendor from Directory <RequiredStar />:
+                  </label>
                   <select
-                    className="form-select"
-                    onChange={(e) => handleSelectSupplier(e.target.value)}
-                    value=""
+                    className={`form-select ${errors.vendorId ? "is-invalid" : ""}`}
+                    onChange={(e) => handleSelectVendor(e.target.value)}
+                    value={form.vendorId || ""}
                   >
-                    <option value="">-- Choose Existing Supplier / Farmer to Auto-Fill --</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.name}>
-                        {c.name} — {c.village || c.city || "Maharashtra"} ({c.contact})
+                    <option value="">-- Choose Registered Vendor to Auto-Fill --</option>
+                    {vendors.map(v => (
+                      <option key={v.vendorId || v.id} value={v.vendorId || v.id}>
+                        {v.name} [{v.vendorId || v.id}] — {v.category || "Supplier"} | {v.city || v.village || "Maharashtra"} ({v.phone || v.contact || "—"})
                       </option>
                     ))}
                   </select>
+                  <span className="form-help">Pulls verified vendor GSTIN, phone, and settlement details</span>
+                </div>
+              ) : (
+                <div style={{
+                  padding: "8px 12px",
+                  background: "rgba(245,158,11,0.08)",
+                  border: "1px solid rgba(245,158,11,0.25)",
+                  borderRadius: 6,
+                  color: "#b45309",
+                  fontSize: "0.78rem",
+                  marginBottom: 12,
+                }}>
+                  💡 Tip: You can register standard vendors in the <b>Vendors</b> tab to auto-fill suppliers here.
                 </div>
               )}
 
@@ -540,35 +565,43 @@ export default function PurchaseModal({
               </div>
 
               <div className="form-grid">
-                {/* Catalog Product Link */}
+                {/* Catalog Product Link — REQUIRED */}
                 <div className="form-group full">
-                  <label>Link to Catalog Product (To Automatically Restock Inventory)</label>
+                  <label>Link to Catalogue Product <RequiredStar /></label>
                   {products && products.length > 0 ? (
                     <select
-                      className="form-select"
+                      className={`form-select ${errors.productId ? "is-invalid" : ""}`}
                       value={form.productId}
                       onChange={(e) => handleSelectProduct(e.target.value)}
+                      required
                     >
-                      <option value="">-- Or enter custom item name below --</option>
+                      <option value="">-- Select Product from Catalogue (Required) --</option>
                       {products.map(p => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({p.id}) — Current Stock: {p.stock ?? 0} {p.unit || 'units'} | Cost: ₹{p.purchasePrice || p.costPrice || 0}
+                          {p.name} [{p.id}] — Stock: {p.stock ?? p.currentStock ?? 0} {p.unit || 'units'} | Cost: ₹{p.purchasePrice || p.costPrice || 0}
                         </option>
                       ))}
                     </select>
-                  ) : null}
+                  ) : (
+                    <div style={{ padding: "10px 14px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 8, color: "#b45309", fontSize: "0.85rem" }}>
+                      ⚠️ No products in catalogue. Please add products before recording purchases.
+                    </div>
+                  )}
+                  {errors.productId && <span style={{ fontSize: 11, color: "#ef4444", marginTop: 4, display: "block" }}>{errors.productId}</span>}
+                  <span className="form-help">Stock will increase automatically for the selected product</span>
                 </div>
 
                 <div className="form-group full">
-                  <label>Procurement Item Description <RequiredStar /></label>
+                  <label>Procurement Item (Auto-filled from Selected Product)</label>
                   <input
-                    className={`form-input ${errors.itemDescription ? "is-invalid" : ""}`}
+                    className="form-input"
                     value={form.itemDescription}
-                    onChange={(e) => handleFieldChange("itemDescription", e.target.value)}
-                    placeholder="Item name as shown on supplier bill"
-                    required
+                    readOnly
+                    style={{ background: "var(--bg)", cursor: "not-allowed", fontWeight: 600 }}
+                    placeholder="Select a product from the dropdown above"
                   />
                   <FieldError error={errors.itemDescription} />
+                  <span className="form-help">Locked to selected catalogue product for relational database integrity</span>
                 </div>
 
                 {/* Inward Quantity */}

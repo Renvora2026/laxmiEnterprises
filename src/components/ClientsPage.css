@@ -1,0 +1,172 @@
+/* ===== Clients page: header, category tabs, toolbar filters ===== */
+.cl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+/* Category tabs: ONE selector for ONE question (what kind of client?) */
+.cl-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
+}
+.cl-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.cl-tab:hover { color: var(--text-main, #0f172a); }
+.cl-tab.active {
+  background: var(--primary, #0284c7);
+  color: #fff;
+}
+.cl-tab-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.14);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+.cl-tab.active .cl-tab-count { background: rgba(255, 255, 255, 0.25); }
+.cl-tab:focus-visible,
+.cl-select select:focus-visible,
+.cl-clear:focus-visible {
+  outline: 2px solid var(--primary, #0284c7);
+  outline-offset: 2px;
+}
+
+.cl-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cl-actions button { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Toolbar inside the table card: search + status + tier */
+.cl-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cl-toolbar .local-search { flex: 1 1 280px; max-width: 420px; }
+
+.cl-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+}
+.cl-select select {
+  min-width: 140px;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  color: var(--text-main, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cl-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--danger, #ef4444);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cl-clear:hover { background: rgba(239, 68, 68, 0.08); }
+
+.cl-count {
+  margin-left: auto;
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+}
+
+@media (max-width: 720px) {
+  .cl-tabs { width: 100%; overflow-x: auto; }
+  .cl-tab { white-space: nowrap; }
+  .cl-toolbar .local-search { max-width: none; flex-basis: 100%; }
+  .cl-count { margin-left: 0; flex-basis: 100%; }
+}
+
+/* ===== Clients table: 5 stacked columns, no horizontal scroll ===== */
+.cl-table {
+  width: 100%;
+  min-width: 0;          /* override any global min-width on tables */
+  table-layout: fixed;
+}
+.cl-table th,
+.cl-table td {
+  vertical-align: top;
+  padding: 14px 12px;
+  overflow-wrap: anywhere;
+}
+.cl-table th { white-space: normal; }
+
+.cl-client { display: flex; gap: 10px; align-items: flex-start; }
+.cl-client-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cl-name { cursor: pointer; color: var(--text-main, #0f172a); font-size: 13.5px; }
+.cl-name:hover { color: var(--primary, #0284c7); }
+.cl-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.cl-sub {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11.5px; color: var(--text-muted, #64748b);
+}
+.cl-label { color: var(--text-muted, #64748b); font-weight: 500; margin-right: 2px; }
+
+.cl-stack { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+.cl-stack.small { font-size: 12px; line-height: 1.4; }
+.cl-link {
+  display: flex; align-items: flex-start; gap: 6px;
+  color: inherit; text-decoration: none;
+}
+.cl-link svg { flex-shrink: 0; margin-top: 2px; color: var(--primary, #0284c7); }
+.cl-link.muted { color: var(--text-muted, #64748b); font-size: 12px; }
+.cl-link.muted svg { color: var(--text-muted, #64748b); }
+.cl-link:hover .cl-email { text-decoration: underline; }
+
+.cl-money { font-size: 14px; font-weight: 800; }
+.cl-due { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted, #64748b); }
+.cl-due.has-due { color: var(--danger, #ef4444); font-weight: 800; }
+
+.cl-status-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+
+/* Stack rows into cards on tablets and phones */
+@media (max-width: 900px) {
+  .cl-table, .cl-table tbody, .cl-table tr, .cl-table td { display: block; width: 100%; }
+  .cl-table colgroup, .cl-table thead { display: none; }
+  .cl-table tr { padding: 14px 16px; border-bottom: 1px solid var(--border, #e2e8f0); }
+  .cl-table td { padding: 6px 0; border: none; }
+}

@@ -1,6 +1,7 @@
 import { sequelize } from "../config/db.js";
 import { User } from "./User.js";
 import { Client } from "./Client.js";
+import { Vendor } from "./Vendor.js";
 import { Product } from "./Product.js";
 import { Inventory } from "./Inventory.js";
 import { Purchase } from "./Purchase.js";
@@ -22,6 +23,19 @@ Invoice.belongsTo(Client, {
   constraints: false,
 });
 
+Vendor.hasMany(Purchase, {
+  foreignKey: "vendorId",
+  sourceKey: "vendorId",
+  as: "purchases",
+  constraints: false,
+});
+Purchase.belongsTo(Vendor, {
+  foreignKey: "vendorId",
+  targetKey: "vendorId",
+  as: "vendor",
+  constraints: false,
+});
+
 Product.hasOne(Inventory, {
   foreignKey: "productId",
   sourceKey: "productId",
@@ -39,6 +53,7 @@ export {
   sequelize,
   User,
   Client,
+  Vendor,
   Product,
   Inventory,
   Purchase,

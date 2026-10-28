@@ -10,8 +10,12 @@ import {
 } from "../utils/validators";
 import { FieldError, RequiredStar, ValidationSummary } from "./ValidationFeedback";
 
-export default function ProductModal({ isOpen, onClose, onSave, productToEdit, nextId, existingIds = [] }) {
-  if (!isOpen) return null;
+export default function ProductModal(props) {
+  if (!props.isOpen) return null;
+  return <ProductModalInner {...props} />;
+}
+
+function ProductModalInner({ isOpen, onClose, onSave, productToEdit, nextId, existingIds = [] }) {
   const isEditing = !!productToEdit;
 
   const [form, setForm] = useState(() => {

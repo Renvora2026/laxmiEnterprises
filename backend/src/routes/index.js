@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./authRoutes.js";
 import clientRoutes from "./clientRoutes.js";
+import vendorRoutes from "./vendorRoutes.js";
 import productRoutes from "./productRoutes.js";
 import inventoryRoutes from "./inventoryRoutes.js";
 import purchaseRoutes from "./purchaseRoutes.js";
@@ -14,6 +15,7 @@ const apiRouter = Router();
 
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/clients", clientRoutes);
+apiRouter.use("/vendors", vendorRoutes);
 apiRouter.use("/products", productRoutes);
 apiRouter.use("/inventory", inventoryRoutes);
 apiRouter.use("/purchases", purchaseRoutes);

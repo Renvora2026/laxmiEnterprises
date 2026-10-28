@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, ShoppingCart, MessageCircle, Receipt,
+  LayoutDashboard, Users, Truck, ShoppingCart, MessageCircle, Receipt,
   IndianRupee, Package, Boxes, ShieldCheck, X, Menu, Database,
   Search, Bell, LogOut
 } from "lucide-react";
@@ -14,6 +14,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
   const titles = {
     "/": ["Enterprise Dashboard", "Live operations, revenue intelligence and stock alerts"],
     "/clients": ["Client Directory", "Enterprise accounts, real-time client management, orders and billing"],
+    "/vendors": ["Vendor Directory", "Suppliers, farmers procurement partners, trade accounts & payables"],
     "/purchases": ["Purchase & Inward Procurement", "Animal feed stocks inward, raw milk procurement & farm direct receipts"],
     "/expo": ["Expo Leads & WhatsApp Broadcasting", "Stall visitors registry (Name, Village, Mobile & Remark) with 1-click bulk WhatsApp campaigns"],
     "/invoices": ["Tax Invoices & Billing", "Commercial GST tax invoices, billing ledger & PDF download"],
@@ -26,15 +27,22 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
   };
   const [title, subtitle] = titles[location.pathname] || titles["/"];
 
-  const nav = [
+  const coreNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/clients", label: "Clients", icon: Users },
+    { to: "/vendors", label: "Vendors", icon: Truck },
     { to: "/purchases", label: "Purchases", icon: ShoppingCart },
     { to: "/expo", label: "Expo Leads", icon: MessageCircle },
+  ];
+
+  const financialNav = [
     { to: "/invoices", label: "Invoices", icon: Receipt },
     { to: "/revenue", label: "Revenue", icon: IndianRupee },
     { to: "/products", label: "Products", icon: Package },
     { to: "/inventory", label: "Inventory", icon: Boxes },
+  ];
+
+  const enterpriseNav = [
     { to: "/workspace", label: "Admin Workspace", icon: ShieldCheck }
   ];
 
@@ -63,7 +71,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
         {/* NAVIGATION ITEMS */}
         <nav className="sidebar-nav" aria-label="Main Navigation">
           <div className="nav-section-title">CORE OPERATIONS</div>
-          {nav.slice(0, 4).map(({ to, label, icon: Icon }) => (
+          {coreNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -77,7 +85,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
           ))}
 
           <div className="nav-section-title" style={{ marginTop: 10 }}>FINANCIALS & INVENTORY</div>
-          {nav.slice(4, 8).map(({ to, label, icon: Icon }) => (
+          {financialNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -91,7 +99,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
           ))}
 
           <div className="nav-section-title" style={{ marginTop: 10 }}>ENTERPRISE & WORKSPACE</div>
-          {nav.slice(8).map(({ to, label, icon: Icon }) => (
+          {enterpriseNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

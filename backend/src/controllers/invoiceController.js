@@ -5,14 +5,10 @@ import { Client } from "../models/Client.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { applyStockChange } from "../utils/stockSync.js";
 
-/**
- * Get all invoices
- */
 export const getInvoices = asyncHandler(async (req, res) => {
-  const invoices = await Invoice.findAll({
-    order: [["createdAt", "DESC"]],
-  });
+  const invoices = await Invoice.findAll({ order: [["createdAt", "DESC"]] });
   return ApiResponse.success(res, invoices, "Invoices retrieved successfully");
 });
 
@@ -32,7 +28,27 @@ export const createInvoice = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(`Invoice ${invoiceData.invoiceNumber} already exists`);
   }
 
-  // Calculate balance due
+  // Stock check PEHLE (invoice create hone se pehle)
+  const stockLines = [];
+  if (Array.isArray(invoiceData.items)) {
+    for (const item of invoiceData.items) {
+      const prodId = item.productId || item.id;
+      const quantity = Number(item.qty ?? item.quantity ?? 0);
+      if (!prodId || quantity <= 0) continue;
+
+      const inv = await Inventory.findOne({ where: { productId: prodId } });
+      if (!inv) continue;
+
+      const available = Number(inv.currentStock || 0);
+      if (available < quantity) {
+        throw ApiError.badRequest(
+          `Insufficient stock for ${inv.productName}: available ${available}, requested ${quantity}`
+        );
+      }
+      stockLines.push({ prodId, quantity });
+    }
+  }
+
   const grandTotal = Number(invoiceData.grandTotal || 0);
   const paidAmount = Number(invoiceData.paidAmount || 0);
   const balanceDue = Math.max(0, grandTotal - paidAmount);
@@ -48,23 +64,12 @@ export const createInvoice = asyncHandler(async (req, res) => {
 
   const invoice = await Invoice.create(invoiceData);
 
-  // 1. Decrement inventory stock
-  if (Array.isArray(invoiceData.items)) {
-    for (const item of invoiceData.items) {
-      const prodId = item.productId || item.id;
-      const quantity = Number(item.qty ?? item.quantity ?? 0);
-      if (prodId && quantity > 0) {
-        const inv = await Inventory.findOne({ where: { productId: prodId } });
-        if (inv) {
-          inv.currentStock = Math.max(0, Number(inv.currentStock || 0) - quantity);
-          inv.lastUpdated = new Date();
-          await inv.save();
-        }
-      }
-    }
+  // Stock OUT (Inventory + Product extraData dono sync)
+  for (const { prodId, quantity } of stockLines) {
+    await applyStockChange(prodId, -quantity);
   }
 
-  // 2. Update client metrics (orders, gross revenue, outstanding balance)
+  // Client metrics
   if (invoiceData.clientId) {
     const client = await Client.findOne({ where: { clientId: invoiceData.clientId } });
     if (client) {
@@ -80,9 +85,6 @@ export const createInvoice = asyncHandler(async (req, res) => {
   return ApiResponse.created(res, invoice, "Sales Invoice created successfully");
 });
 
-/**
- * Record payment on invoice
- */
 export const recordPayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { paymentAmount, paymentMode } = req.body;
@@ -106,10 +108,8 @@ export const recordPayment = asyncHandler(async (req, res) => {
   invoice.balanceDue = newBalance;
   invoice.paymentStatus = newBalance === 0 ? "Paid" : "Partial";
   if (paymentMode) invoice.paymentMode = paymentMode;
-
   await invoice.save();
 
-  // Deduct from client's outstanding balance
   if (invoice.clientId) {
     const client = await Client.findOne({ where: { clientId: invoice.clientId } });
     if (client) {
@@ -121,24 +121,16 @@ export const recordPayment = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, invoice, "Payment recorded successfully");
 });
 
-/**
- * Delete an invoice
- */
 export const deleteInvoice = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const invoice = await Invoice.findOne({
     where: {
-      [Op.or]: [
-        { invoiceNumber: id },
-        ...(isNaN(id) ? [] : [{ id: Number(id) }])
-      ]
-    }
+      [Op.or]: [{ invoiceNumber: id }, ...(isNaN(id) ? [] : [{ id: Number(id) }])],
+    },
   });
-
   if (!invoice) {
     throw ApiError.notFound(`Invoice not found with number: ${id}`);
   }
-
   await invoice.destroy();
   return ApiResponse.success(res, null, "Invoice deleted successfully");
 });

@@ -14,6 +14,7 @@ export default function PurchasesPage({
   purchases = [],
   onSavePurchases,
   onCreatePurchase,
+  vendors = [],
   clients = [],
   products = [],
   company = {},
@@ -616,7 +617,7 @@ export default function PurchasesPage({
         onSave={handleSavePurchase}
         purchaseToEdit={editingPurchase}
         nextId={nextPOId}
-        clients={clients}
+        vendors={vendors}
         products={products}
       />
 
