@@ -21,7 +21,7 @@ jobs:
 
       - name: Build React Frontend
         env:
-          VITE_API_URL: https://api.shivcore.com/api/v1
+          VITE_API_URL: https://api.shivcoretech.com/api/v1
         run: |
           npm ci
           npm run build
@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: laxmi/
+          server-dir: laxmienterprises/
 
       - name: Deploy Backend to Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
