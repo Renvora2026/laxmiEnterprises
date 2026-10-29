@@ -19,6 +19,14 @@ const VENDOR_CATEGORIES = [
   "Farmers",
 ];
 
+const normalizeVendorCategory = (cat) => {
+  const c = String(cat || "").trim().toLowerCase();
+  if (c.includes("feed") || c.includes("raw feed") || c.includes("animal")) return "Animal Feed Shop";
+  if (c.includes("dairy") || c.includes("milk")) return "Dairy";
+  if (c.includes("farm")) return "Farmers";
+  return "Animal Feed Shop";
+};
+
 const PAYMENT_TERMS_OPTIONS = [
   "Immediate / Cash on Delivery",
   "Net 7 Days",
@@ -46,7 +54,7 @@ export default function VendorModal({
         vendorId: vendorToEdit.vendorId || vendorToEdit.id || nextId,
         name: vendorToEdit.name || "",
         companyName: vendorToEdit.companyName || vendorToEdit.name || "",
-        category: vendorToEdit.category || "Animal Feed Shop",
+        category: normalizeVendorCategory(vendorToEdit.category || "Animal Feed Shop"),
         contactPerson: vendorToEdit.contactPerson || "",
         phone: vendorToEdit.phone || vendorToEdit.contact || "",
         email: vendorToEdit.email || "",
@@ -103,7 +111,7 @@ export default function VendorModal({
         vendorId: vendorToEdit.vendorId || vendorToEdit.id || nextId,
         name: vendorToEdit.name || "",
         companyName: vendorToEdit.companyName || vendorToEdit.name || "",
-        category: vendorToEdit.category || "Animal Feed Shop",
+        category: normalizeVendorCategory(vendorToEdit.category || "Animal Feed Shop"),
         contactPerson: vendorToEdit.contactPerson || "",
         phone: vendorToEdit.phone || vendorToEdit.contact || "",
         email: vendorToEdit.email || "",

@@ -10,6 +10,14 @@ import ExportMenu from "./ExportMenu";
 import { downloadCSV } from "../utils/exportUtils";
 import { erpApi } from "../services/api";
 
+export const normalizeVendorCategory = (cat) => {
+  const c = String(cat || "").trim().toLowerCase();
+  if (c.includes("feed") || c.includes("raw feed") || c.includes("animal")) return "Animal Feed Shop";
+  if (c.includes("dairy") || c.includes("milk")) return "Dairy";
+  if (c.includes("farm")) return "Farmers";
+  return "Animal Feed Shop";
+};
+
 export default function VendorsPage({ vendors = [], onSaveVendors }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -42,7 +50,8 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
   // Filtered vendors
   const filtered = useMemo(() => {
     return (vendors || []).filter(v => {
-      const matchesCat = categoryFilter === "All" || v.category === categoryFilter;
+      const vCat = normalizeVendorCategory(v.category);
+      const matchesCat = categoryFilter === "All" || vCat === categoryFilter;
       const q = search.toLowerCase().trim();
       if (!q) return matchesCat;
 
@@ -69,9 +78,9 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
 
   // Metric stats for the 3 agribusiness sectors
   const totalVendors = vendors.length;
-  const feedSuppliers = vendors.filter(v => v.category === "Animal Feed Shop").length;
-  const dairySuppliers = vendors.filter(v => v.category === "Dairy").length;
-  const farmerSuppliers = vendors.filter(v => v.category === "Farmers").length;
+  const feedSuppliers = vendors.filter(v => normalizeVendorCategory(v.category) === "Animal Feed Shop").length;
+  const dairySuppliers = vendors.filter(v => normalizeVendorCategory(v.category) === "Dairy").length;
+  const farmerSuppliers = vendors.filter(v => normalizeVendorCategory(v.category) === "Farmers").length;
 
   const handleOpenAdd = () => {
     setEditingVendor(null);
@@ -331,7 +340,7 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
                           fontWeight: 600,
                           display: "inline-block",
                         }}>
-                          {v.category || "Raw Feed & Supplies"}
+                          {normalizeVendorCategory(v.category)}
                         </span>
                       </td>
 

@@ -1,10 +1,16 @@
 /// Global Application Configuration for Laxmi Enterprises Flutter WebApp
 class AppConfig {
   /// The Web URL for the ERP portal.
-  /// - For Android Emulator accessing Vite on host PC: 'http://10.0.2.2:5173'
-  /// - For Real Device on same Wi-Fi: Replace with your PC's IP, e.g. 'http://192.168.1.X:5173'
-  /// - For Production Deployed Web App: e.g. 'https://erp.laxmienterprises.com'
+  ///
+  /// 🔴 IMPORTANT: Change this to your deployed URL before building for production.
+  /// - Dev / Emulator:   'http://10.0.2.2:5173'
+  /// - Dev / Real phone: 'http://192.168.X.X:5173'  (your PC's local IP)
+  /// - Production:       'https://erp.laxmienterprises.com'  ← set this before release
   static const String initialUrl = 'http://10.0.2.2:5173';
+
+  /// Cache-busting: when true the WebView clears its disk cache on every launch
+  /// so users always see the latest deployed website immediately.
+  static const bool clearCacheOnLaunch = true;
 
   /// App Name
   static const String appTitle = 'Laxmi Enterprises ERP';

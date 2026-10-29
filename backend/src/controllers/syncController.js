@@ -266,6 +266,14 @@ export const syncPurchases = asyncHandler(async (req, res) => {
     if (item.purchaseId) incomingIds.push(String(item.purchaseId));
     if (item.id) incomingIds.push(String(item.id));
 
+    const subtotal = Number(item.subtotal || item.taxableAmount || item.amount || 0);
+    const grandTotal = Number(item.grandTotal || item.totalAmount || item.total || subtotal);
+    const paymentStatus = item.paymentStatus || item.status || "Pending";
+    let paidAmount = Number(item.paidAmount ?? (paymentStatus === "Paid" ? grandTotal : 0));
+    if (paymentStatus === "Partial" && (paidAmount <= 0 || paidAmount >= grandTotal) && grandTotal > 0) {
+      paidAmount = Math.round(grandTotal / 2);
+    }
+
     const [record] = await Purchase.findOrCreate({
       where: { purchaseId },
       defaults: {
@@ -273,28 +281,30 @@ export const syncPurchases = asyncHandler(async (req, res) => {
         vendorId: item.vendorId || "",
         vendorName: item.vendorName || "Vendor",
         vendorGstin: item.vendorGstin || "",
-        vendorContact: item.vendorContact || "",
-        vendorInvoiceNo: item.vendorInvoiceNo || "",
+        vendorContact: item.vendorContact || item.contact || "",
+        vendorInvoiceNo: item.vendorInvoiceNo || item.billNumber || "",
         date: item.date || "",
         category: item.category || "Animal Feed Shop",
         items: item.items || [],
-        subtotal: Number(item.subtotal || 0),
-        grandTotal: Number(item.grandTotal || item.total || 0),
-        paidAmount: Number(item.paidAmount || 0),
-        paymentStatus: item.paymentStatus || item.status || "Pending",
-        paymentMode: item.paymentMode || "NEFT/RTGS",
-        notes: item.notes || "",
+        subtotal,
+        grandTotal,
+        paidAmount,
+        paymentStatus,
+        paymentMode: item.paymentMode || item.paymentMethod || "NEFT/RTGS",
+        notes: item.notes || item.remarks || "",
       },
     });
 
     await record.update({
       vendorId: item.vendorId || record.vendorId,
       vendorName: item.vendorName || record.vendorName,
+      category: item.category || record.category,
       items: item.items || record.items,
-      grandTotal: Number(item.grandTotal || item.total || record.grandTotal),
-      paidAmount: Number(item.paidAmount ?? record.paidAmount),
-      paymentStatus: item.paymentStatus || item.status || record.paymentStatus,
-      paymentMode: item.paymentMode || record.paymentMode,
+      subtotal: subtotal || record.subtotal,
+      grandTotal: grandTotal || record.grandTotal,
+      paidAmount: paidAmount,
+      paymentStatus: paymentStatus,
+      paymentMode: item.paymentMode || item.paymentMethod || record.paymentMode,
     });
   }
 

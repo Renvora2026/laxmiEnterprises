@@ -5,10 +5,27 @@ export class Purchase extends Model {
   toJSON() {
     const values = { ...this.get() };
     const extra = values.extraData || {};
+    const grandTotal = Number(values.grandTotal ?? values.total ?? values.totalAmount ?? 0);
+    const subtotal = Number(values.subtotal ?? values.amount ?? values.taxableAmount ?? 0);
+    const paidAmount = Number(values.paidAmount ?? 0);
+    const balanceDue = Number(values.balanceDue ?? Math.max(0, grandTotal - paidAmount));
+    const status = values.paymentStatus || values.status || "Pending";
+
     return {
       ...extra,
       ...values,
       id: values.purchaseId || values.id,
+      purchaseId: values.purchaseId || values.id,
+      totalAmount: grandTotal,
+      total: grandTotal,
+      grandTotal: grandTotal,
+      taxableAmount: subtotal,
+      amount: subtotal,
+      subtotal: subtotal,
+      paidAmount: paidAmount,
+      balanceDue: balanceDue,
+      paymentStatus: status,
+      status: status,
     };
   }
 }

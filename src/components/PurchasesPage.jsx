@@ -10,6 +10,31 @@ import PurchaseViewModal from "./PurchaseViewModal";
 import { generatePurchaseInvoicePDF } from "../services/pdfService";
 import { erpApi } from "../services/api";
 
+export const getPurchaseAmounts = (p) => {
+  const taxable = Number(p.taxableAmount ?? p.amount ?? p.subtotal ?? 0);
+  const gst = Number(p.gstAmount ?? p.tax ?? p.cgst ?? 0);
+  const total = Number(p.totalAmount ?? p.total ?? p.grandTotal ?? (taxable + gst) ?? 0);
+  const status = p.paymentStatus || p.status || "Pending";
+
+  let paid = 0;
+  if (status === "Paid") {
+    paid = Number(p.paidAmount !== undefined && p.paidAmount !== null && p.paidAmount !== "" ? p.paidAmount : total);
+    if (paid <= 0 && total > 0) paid = total;
+  } else if (status === "Pending") {
+    paid = 0;
+  } else if (status === "Partial") {
+    const rawPaid = Number(p.paidAmount);
+    if (rawPaid > 0 && rawPaid < total) {
+      paid = rawPaid;
+    } else {
+      paid = total > 0 ? Math.round(total / 2) : 0;
+    }
+  }
+
+  const balance = Math.max(0, total - paid);
+  return { taxable, gst, total, paid, balance, status };
+};
+
 export default function PurchasesPage({
   purchases = [],
   onSavePurchases,
@@ -45,27 +70,24 @@ export default function PurchasesPage({
   // Aggregate Agribusiness Procurement KPIs
   const totalPurchasesAmount = useMemo(() => {
     return purchases.reduce((sum, p) => {
-      const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
-      const pGst = Number(p.gstAmount ?? p.tax ?? 0);
-      const tot = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
-      const paid = Number(p.paidAmount || 0);
-      return sum + Math.max(tot, paid);
+      const { total } = getPurchaseAmounts(p);
+      return sum + total;
     }, 0);
   }, [purchases]);
 
   const totalPaidAmount = useMemo(() => {
     return purchases.reduce((sum, p) => {
-      const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
-      const pGst = Number(p.gstAmount ?? p.tax ?? 0);
-      const tot = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
-      const paid = Number(p.paidAmount !== undefined ? p.paidAmount : (p.paymentStatus === "Paid" ? tot : 0));
+      const { paid } = getPurchaseAmounts(p);
       return sum + paid;
     }, 0);
   }, [purchases]);
 
   const totalBalanceDue = useMemo(() => {
-    return Math.max(0, totalPurchasesAmount - totalPaidAmount);
-  }, [totalPurchasesAmount, totalPaidAmount]);
+    return purchases.reduce((sum, p) => {
+      const { balance } = getPurchaseAmounts(p);
+      return sum + balance;
+    }, 0);
+  }, [purchases]);
 
   const feedPurchasesCount = useMemo(() => {
     return purchases.filter(p => p.category === "Animal Feed Shop").length;
@@ -376,12 +398,7 @@ export default function PurchasesPage({
                   const isFeed = p.category === "Animal Feed Shop";
 
                   // Unified numerical math
-                  const pTaxable = Number(p.taxableAmount ?? p.amount ?? 0);
-                  const pGst = Number(p.gstAmount ?? p.tax ?? 0);
-                  const pRawTotal = Number((p.totalAmount ?? p.total ?? (pTaxable + pGst)) || 0);
-                  const pPaid = Number(p.paidAmount !== undefined ? p.paidAmount : (p.paymentStatus === "Paid" ? pRawTotal : 0));
-                  const pEffectiveTotal = Math.max(pRawTotal, pPaid);
-                  const pBalance = Math.max(0, pEffectiveTotal - pPaid);
+                  const { taxable: pTaxable, total: pEffectiveTotal, paid: pPaid, balance: pBalance, status: pStatus } = getPurchaseAmounts(p);
 
                   // Procurement quantity & unit resolution
                   const qty = Number(p.inwardQty || p.quantity || (isDairy ? p.milkQuantity : (isFarmer ? p.farmQuantity : p.feedQuantity)) || 1);

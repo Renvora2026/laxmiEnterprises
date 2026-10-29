@@ -17,7 +17,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
     "/vendors": ["Vendor Directory", "Suppliers, farmers procurement partners, trade accounts & payables"],
     "/purchases": ["Purchase & Inward Procurement", "Animal feed stocks inward, raw milk procurement & farm direct receipts"],
     "/expo": ["Expo Leads & WhatsApp Broadcasting", "Stall visitors registry (Name, Village, Mobile & Remark) with 1-click bulk WhatsApp campaigns"],
-    "/invoices": ["Tax Invoices & Billing", "Commercial GST tax invoices, billing ledger & PDF download"],
+    "/invoices": ["Sales", "Commercial GST tax invoices, billing ledger & PDF download"],
     "/revenue": ["Revenue Intelligence", "Track financial milestones, invoicing and gross earnings"],
     "/products": ["Product Catalogue", "Manage supplies, pricing tiers, stock levels & safety thresholds"],
     "/inventory": ["Inventory Logistics", "Track inward receipts, outward dispatches, SKU flow & bay storage"],
@@ -36,7 +36,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
   ];
 
   const financialNav = [
-    { to: "/invoices", label: "Invoices", icon: Receipt },
+    { to: "/invoices", label: "Sales", icon: Receipt },
     { to: "/revenue", label: "Revenue", icon: IndianRupee },
     { to: "/products", label: "Products", icon: Package },
     { to: "/inventory", label: "Inventory", icon: Boxes },
@@ -245,7 +245,7 @@ export default function Layout({ children, currentTheme, onSelectTheme, adminPro
         </NavLink>
         <NavLink to="/invoices" className={({ isActive }) => `mobile-bottom-item ${isActive ? "active" : ""}`}>
           <Receipt size={20} />
-          <span>Invoices</span>
+          <span>Sales</span>
         </NavLink>
         <button
           type="button"

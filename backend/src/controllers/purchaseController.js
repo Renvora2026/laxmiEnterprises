@@ -58,6 +58,14 @@ export const createPurchase = asyncHandler(async (req, res) => {
     }
   }
 
+  purchaseData.subtotal = Number(purchaseData.subtotal || purchaseData.taxableAmount || purchaseData.amount || 0);
+  purchaseData.grandTotal = Number(purchaseData.grandTotal || purchaseData.totalAmount || purchaseData.total || purchaseData.subtotal);
+  if (purchaseData.paymentStatus === "Paid" && (purchaseData.paidAmount === undefined || purchaseData.paidAmount === null)) {
+    purchaseData.paidAmount = purchaseData.grandTotal;
+  } else if (purchaseData.paymentStatus === "Partial" && (Number(purchaseData.paidAmount || 0) <= 0 || Number(purchaseData.paidAmount || 0) >= purchaseData.grandTotal) && purchaseData.grandTotal > 0) {
+    purchaseData.paidAmount = Math.round(purchaseData.grandTotal / 2);
+  }
+
   const purchase = await Purchase.create(purchaseData);
 
   for (const { prodId, quantity } of stockLines) {
@@ -99,7 +107,14 @@ export const updatePurchase = asyncHandler(async (req, res) => {
   if (!purchase) {
     throw ApiError.notFound(`Purchase not found with id: ${id}`);
   }
-  await purchase.update(req.body);
+  const updateData = { ...req.body };
+  if (updateData.subtotal === undefined && (updateData.taxableAmount || updateData.amount)) {
+    updateData.subtotal = Number(updateData.taxableAmount || updateData.amount || 0);
+  }
+  if (updateData.grandTotal === undefined && (updateData.totalAmount || updateData.total)) {
+    updateData.grandTotal = Number(updateData.totalAmount || updateData.total || 0);
+  }
+  await purchase.update(updateData);
   return ApiResponse.success(res, purchase, "Purchase updated successfully");
 });
 

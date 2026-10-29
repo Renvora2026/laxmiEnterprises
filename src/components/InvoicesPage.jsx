@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import {
   Receipt, Download, Plus, Search, X, Trash2,
   CheckCircle2, AlertTriangle, TrendingUp, IndianRupee, Clock,
-  Eye, RefreshCw, Printer, ShieldCheck, Filter, ArrowUpRight
+  Eye, RefreshCw, Printer, ShieldCheck, Filter, ArrowUpRight, ChevronDown, FileText
 } from "lucide-react";
 import { generateInvoicePDF } from "../services/pdfService";
 import { erpApi } from "../services/api";
@@ -24,6 +24,7 @@ export default function InvoicesPage({
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [localToast, setLocalToast] = useState(null);
+  const [reportDropdownOpen, setReportDropdownOpen] = useState(false);
 
   const nextInvoiceId = useMemo(() => {
     const ids = (invoices || [])
@@ -53,6 +54,155 @@ export default function InvoicesPage({
       setLocalToast(msg);
       setTimeout(() => setLocalToast(null), 3000);
     }
+  };
+
+  // ── Download Report ──────────────────────────────────────────────────
+  /**
+   * Safely parse an invoice date.
+   * Priority: inv.date (YYYY-MM-DD string) -> inv.createdAt -> null
+   * Returns a Date object or null if unparseable.
+   */
+  const parseInvDate = (inv) => {
+    const raw = inv.date || inv.createdAt || inv.invoiceDate || "";
+    if (!raw) return null;
+    // YYYY-MM-DD stored as UTC midnight — read parts directly to avoid TZ shift
+    const isoMatch = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return new Date(
+        parseInt(isoMatch[1], 10),
+        parseInt(isoMatch[2], 10) - 1,
+        parseInt(isoMatch[3], 10)
+      );
+    }
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const downloadReport = (period) => {
+    const now = new Date();
+    let filtered = [];
+    let label = "";
+
+    if (period === "monthly") {
+      // Current calendar month
+      const yr = now.getFullYear(), mo = now.getMonth();
+      filtered = invoices.filter(inv => {
+        const d = parseInvDate(inv);
+        return d && d.getFullYear() === yr && d.getMonth() === mo;
+      });
+      label = `${now.toLocaleString("en-IN", { month: "long" })}_${yr}`;
+
+    } else if (period === "quarterly") {
+      // Indian Financial Year quarters: Q1=Apr-Jun, Q2=Jul-Sep, Q3=Oct-Dec, Q4=Jan-Mar
+      const calMo = now.getMonth(); // 0-based
+      // Shift to FY month (Apr=0 ... Mar=11)
+      const fyMo = (calMo + 9) % 12;
+      const q = Math.floor(fyMo / 3) + 1; // Q1..Q4
+      // Calendar month ranges for each FY quarter
+      const qRanges = {
+        1: { months: [3, 4, 5],  label: "Apr-Jun" },   // Q1
+        2: { months: [6, 7, 8],  label: "Jul-Sep" },   // Q2
+        3: { months: [9, 10, 11], label: "Oct-Dec" },  // Q3
+        4: { months: [0, 1, 2],  label: "Jan-Mar" },   // Q4
+      };
+      const { months, label: qLabel } = qRanges[q];
+      const fyYear = calMo >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const fyEnd  = fyYear + 1;
+      filtered = invoices.filter(inv => {
+        const d = parseInvDate(inv);
+        if (!d) return false;
+        const dMo = d.getMonth();
+        const dYr = d.getFullYear();
+        if (!months.includes(dMo)) return false;
+        // Q4 spans Jan-Mar of the next FY year
+        if (q === 4) return dYr === fyEnd;
+        return dYr === fyYear;
+      });
+      label = `Q${q}_FY${fyYear}-${String(fyEnd).slice(2)}_${qLabel}`;
+
+    } else if (period === "yearly") {
+      // Indian Financial Year: Apr 1 of fyYear -> Mar 31 of fyYear+1
+      const calMo = now.getMonth();
+      const fyYear = calMo >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const fyEnd  = fyYear + 1;
+      const fyStart = new Date(fyYear, 3, 1);   // Apr 1
+      const fyEndDate = new Date(fyEnd, 2, 31);  // Mar 31
+      filtered = invoices.filter(inv => {
+        const d = parseInvDate(inv);
+        return d && d >= fyStart && d <= fyEndDate;
+      });
+      label = `FY${fyYear}-${String(fyEnd).slice(2)}`;
+    }
+
+    setReportDropdownOpen(false);
+
+    if (filtered.length === 0) {
+      notify(`⚠️ No sales records found for the selected period (${label}).`);
+      return;
+    }
+
+    // ── Build CSV ────────────────────────────────────────────────────────
+    const headers = [
+      "Invoice ID", "Client Name", "Invoice Date", "Due Date",
+      "Category", "Payment Method",
+      "Taxable Amt (INR)", "GST (INR)", "Grand Total (INR)",
+      "Paid Amt (INR)", "Balance Due (INR)", "Status"
+    ];
+
+    const rows = filtered.map(inv => {
+      const taxable  = Number(inv.amount    || inv.subtotal  || 0);
+      const gst      = Number(inv.tax       || (Number(inv.cgstTotal || 0) + Number(inv.sgstTotal || 0) + Number(inv.igstTotal || 0)) || Math.round(taxable * 0.18));
+      const total    = Number(inv.total     || inv.grandTotal || 0);
+      const paid     = Number(inv.paidAmount  || 0);
+      const balance  = Number(inv.balanceDue  || Math.max(0, total - paid));
+      return [
+        inv.id || inv.invoiceNumber || "",
+        inv.clientName || "",
+        inv.date || inv.invoiceDate || "",
+        inv.dueDate || "",
+        inv.category || "Hardware",
+        inv.paymentMethod || inv.paymentMode || "NEFT",
+        taxable.toFixed(2),
+        gst.toFixed(2),
+        total.toFixed(2),
+        paid.toFixed(2),
+        balance.toFixed(2),
+        inv.status || inv.paymentStatus || ""
+      ];
+    });
+
+    // ── Summary totals ───────────────────────────────────────────────────
+    const sum = (key, idx) => filtered.reduce((s, inv) => s + Number(rows[filtered.indexOf(inv)][idx]), 0);
+    const totTaxable = filtered.reduce((s, _, i) => s + parseFloat(rows[i][6]), 0);
+    const totGST     = filtered.reduce((s, _, i) => s + parseFloat(rows[i][7]), 0);
+    const totTotal   = filtered.reduce((s, _, i) => s + parseFloat(rows[i][8]), 0);
+    const totPaid    = filtered.reduce((s, _, i) => s + parseFloat(rows[i][9]), 0);
+    const totBal     = filtered.reduce((s, _, i) => s + parseFloat(rows[i][10]), 0);
+
+    const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+
+    const csvContent = [
+      esc(`Laxmi Enterprises - Sales Report (${label})`),
+      esc(`Generated on: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`),
+      esc(`Period: ${label}`) + `,` + esc(`Total Invoices: ${filtered.length}`),
+      "",
+      headers.map(esc).join(","),
+      ...rows.map(r => r.map(esc).join(",")),
+      "",
+      [esc("TOTAL"), esc(""), esc(""), esc(""), esc(""), esc(""),
+       esc(totTaxable.toFixed(2)), esc(totGST.toFixed(2)), esc(totTotal.toFixed(2)),
+       esc(totPaid.toFixed(2)), esc(totBal.toFixed(2)), esc("")].join(",")
+    ].join("\n");
+
+    const BOM = "\uFEFF"; // UTF-8 BOM for Excel compatibility
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `LaxmiEnterprises_Sales_${label}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify(`✓ Sales report (${filtered.length} records) downloaded — ${label}`);
   };
 
   // High-Level Commercial KPIs
@@ -153,19 +303,60 @@ export default function InvoicesPage({
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-
-          {/* Create New Invoice */}
+        {/* Download Report Dropdown */}
+        <div style={{ position: "relative" }}>
           <button
             type="button"
-            className="primary"
-            onClick={() => onOpenCreateInvoice ? onOpenCreateInvoice() : setIsCreateModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            className="outline"
+            onClick={() => setReportDropdownOpen(o => !o)}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}
           >
-            <Plus size={16} />
-            <span>Create Invoice</span>
+            <FileText size={15} />
+            <span>Download Report</span>
+            <ChevronDown size={14} style={{ marginLeft: 2, transition: "transform 0.2s", transform: reportDropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
           </button>
+          {reportDropdownOpen && (
+            <>
+              <div
+                onClick={() => setReportDropdownOpen(false)}
+                style={{ position: "fixed", inset: 0, zIndex: 99 }}
+              />
+              <div style={{
+                position: "absolute", top: "calc(100% + 6px)", right: 0,
+                background: "var(--card-bg)", border: "1px solid var(--border)",
+                borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                zIndex: 100, minWidth: 190, overflow: "hidden"
+              }}>
+                {[
+                  { key: "monthly",   label: "Monthly Report",   sub: "Current month invoices" },
+                  { key: "quarterly", label: "Quarterly Report", sub: "Current quarter invoices" },
+                  { key: "yearly",    label: "Yearly Report",    sub: "Current financial year" },
+                ].map(({ key, label, sub }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => downloadReport(key)}
+                    style={{
+                      width: "100%", textAlign: "left", background: "none",
+                      border: "none", padding: "11px 16px", cursor: "pointer",
+                      display: "flex", flexDirection: "column", gap: 2,
+                      borderBottom: key !== "yearly" ? "1px solid var(--border)" : "none"
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--hover-bg, rgba(0,91,181,0.06))"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: 13, color: "var(--text-main)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Download size={13} style={{ color: "var(--primary)" }} />
+                      {label}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", paddingLeft: 19 }}>{sub}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
+
       </div>
 
       {/* 4 PRIMARY METRIC CARDS */}
@@ -287,7 +478,7 @@ export default function InvoicesPage({
                   : "No invoice records match your current search query or status filter."}
               </p>
               <button className="primary" onClick={() => onOpenCreateInvoice ? onOpenCreateInvoice() : setIsCreateModalOpen(true)}>
-                <Plus size={15} /> Create Tax Invoice
+                <Plus size={15} /> Add Sale
               </button>
             </div>
           ) : (
