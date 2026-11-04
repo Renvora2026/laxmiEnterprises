@@ -384,6 +384,8 @@ class _WebViewScreenState extends State<WebViewScreen> with WidgetsBindingObserv
       });
     }
 
+    // Clear HTTP disk/memory cache to ensure fresh web assets while keeping auth tokens
+    _controller.clearCache();
     _controller.loadRequest(Uri.parse(widget.initialUrl));
     _isControllerInitialized = true;
   }
