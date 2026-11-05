@@ -9,6 +9,9 @@ import RecordVendorPaymentModal from "./RecordVendorPaymentModal";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
+import { FileText as DocIcon } from "lucide-react";
 import { erpApi } from "../services/api";
 import { formatIndianCurrency, formatDate } from "../utils/formatters";
 import { getToday, getFiscalYearFormatted, getFiscalYearOptions, VENDOR_TYPES, VENDOR_TYPE_LIST } from "../constants/erpConstants";
@@ -350,6 +353,36 @@ export default function PurchasesPage({
               </button>
             )}
           </div>
+
+          {/* Mobile Filter Chips matching Screen 4 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {["All", "Animal Feed", "Dairy"].map(cat => {
+              const count = cat === "All" ? purchases.length : purchases.filter(p => (p.category || "").toLowerCase().includes(cat.toLowerCase())).length;
+              const isActive = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {cat === "All" ? `All (${count})` : `${cat} (${count})`}
+                </button>
+              );
+            })}
+          </div>
           <div>
             <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
               Showing {filteredPurchases.length} of {periodPurchases.length} purchase bills
@@ -499,7 +532,7 @@ export default function PurchasesPage({
             }
             /* MOBILE RECORD CARDS VIEW */
             mobileView={
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                 {filteredPurchases.map((pur) => {
                   const pId = pur.purchaseId || pur.id;
                   const vendor = vendorMap.get(pur.vendorId);
@@ -508,68 +541,31 @@ export default function PurchasesPage({
                   const balance = Number(pur.balanceDue ?? Math.max(0, total - paid));
                   const status = pur.status || pur.paymentStatus || "Unpaid";
                   const isSettled = paid >= total && total > 0;
-                  const lines = pur.lines || (Array.isArray(pur.items) ? pur.items : []);
 
                   return (
                     <MobileRecordCard
                       key={pId}
-                      idBadge={pId}
-                      title={pur.vendorName || vendor?.name || "Registered Vendor"}
-                      subtitle={`Bill Date: ${formatDate(pur.purchaseDate || pur.date)}`}
-                      categoryBadge={pur.category || vendor?.category || "Feed Manufacturer"}
-                      statusBadge={
-                        <span className={`badge ${isSettled ? "paid" : (status === "Overdue" ? "overdue" : "pending-payment")}`} style={{ fontSize: 11 }}>
-                          {isSettled ? "Settled" : status}
-                        </span>
-                      }
-                      primaryMetrics={[
-                        { label: "Total Bill", value: formatIndianCurrency(total), isMoney: true },
-                        { label: "Paid", value: formatIndianCurrency(paid), color: "#10b981", isMoney: true },
-                        { label: "Balance", value: formatIndianCurrency(balance), color: balance > 0 ? "var(--danger)" : "var(--text-muted)", isMoney: true },
-                      ]}
-                      expandedDetails={
-                        <div>
-                          {lines.length > 0 && (
-                            <div style={{ marginBottom: 6 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Line Items:</span>
-                              {lines.map((l, i) => {
-                                const prod = productMap.get(l.productId);
-                                const pName = l.productName || prod?.name || l.description || l.productId;
-                                const unit = l.unitOfMeasure || prod?.unitOfMeasure || l.unit || "Bags";
-                                const qty = Number(l.quantity ?? l.qty ?? 0);
-                                return (
-                                  <div key={i} className="mobile-record-detail-row">
-                                    <span className="mobile-record-detail-label">{pName}</span>
-                                    <span className="mobile-record-detail-val">{qty} {unit}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {pur.vendorId && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Vendor ID</span>
-                              <span className="mobile-record-detail-val" style={{ fontFamily: "monospace" }}>{pur.vendorId}</span>
-                            </div>
-                          )}
-                          {pur.paymentMode && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Payment Mode</span>
-                              <span className="mobile-record-detail-val">{pur.paymentMode}</span>
-                            </div>
-                          )}
+                      avatar={
+                        <div style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 8,
+                          background: "rgba(99, 102, 241, 0.12)",
+                          color: "#6366f1",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          <DocIcon size={18} />
                         </div>
                       }
-                      actions={
-                        <button
-                          type="button"
-                          className="primary"
-                          onClick={() => setViewingPurchase(pur)}
-                          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", fontSize: "13px", padding: "8px 12px" }}
-                        >
-                          <Eye size={15} /> View Purchase Voucher
-                        </button>
-                      }
+                      title={pId}
+                      subtitle={`${formatDate(pur.purchaseDate || pur.date)} • ${pur.vendorName || vendor?.name || "Vendor"}`}
+                      amount={formatIndianCurrency(total)}
+                      amountSub={balance > 0 ? `Due: ${formatIndianCurrency(balance)}` : `Paid: ${formatIndianCurrency(paid)}`}
+                      statusBadge={<StatusPill status={isSettled ? "Paid" : status} />}
+                      showChevron={true}
+                      onClick={() => setViewingPurchase(pur)}
                     />
                   );
                 })}
@@ -579,25 +575,33 @@ export default function PurchasesPage({
         )}
       </div>
 
-      {/* VIEW MODAL */}
-      <PurchaseViewModal
-        isOpen={!!viewingPurchase}
-        onClose={() => setViewingPurchase(null)}
-        purchase={viewingPurchase}
-        company={company}
-        vendor={vendorMap.get(viewingPurchase?.vendorId)}
-        onEdit={(pur) => {
-          setViewingPurchase(null);
-          setEditingPurchase(pur);
-          setModalOpen(true);
-        }}
-        onRecordPayment={(pur) => {
-          setViewingPurchase(null);
-          setPaymentPurchase(pur);
-        }}
-        showToast={notify}
-        onRefresh={onRefresh}
+      {/* Mobile Sticky Primary Action Button matching Screen 4 */}
+      <MobilePrimaryAction
+        label="New Purchase"
+        onClick={() => setModalOpen(true)}
       />
+
+      {/* VIEW MODAL */}
+      {viewingPurchase && (
+        <PurchaseViewModal
+          isOpen={!!viewingPurchase}
+          onClose={() => setViewingPurchase(null)}
+          purchase={viewingPurchase}
+          company={company}
+          vendor={vendorMap.get(viewingPurchase?.vendorId)}
+          onEdit={(pur) => {
+            setViewingPurchase(null);
+            setEditingPurchase(pur);
+            setModalOpen(true);
+          }}
+          onRecordPayment={(pur) => {
+            setViewingPurchase(null);
+            setPaymentPurchase(pur);
+          }}
+          showToast={notify}
+          onRefresh={onRefresh}
+        />
+      )}
 
       {/* CREATE / EDIT MODAL */}
       <PurchaseModal

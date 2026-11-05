@@ -28,6 +28,14 @@ export default function PurchaseViewModal({
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && purchase) {
+      document.body.classList.add("modal-open");
+      return () => document.body.classList.remove("modal-open");
+    }
+  }, [isOpen, purchase]);
+
   if (!isOpen || !purchase) return null;
 
   const isFeed = purchase.category === "Animal Feed Shop";
@@ -794,8 +802,7 @@ export default function PurchaseViewModal({
         </div>
 
         {/* MODAL FOOTER */}
-        {/* MODAL FOOTER */}
-        <div className="modal-footer" style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div className="modal-footer mobile-modal-footer-hierarchical" style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12px", color: "var(--text-muted)" }}>
               <ShieldCheck size={16} color="#10b981" />

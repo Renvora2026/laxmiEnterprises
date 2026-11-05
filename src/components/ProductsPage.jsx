@@ -9,6 +9,8 @@ import ExportMenu from "./ExportMenu";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { downloadCSV } from "../utils/exportUtils";
 import { calculateProductStock } from "../services/stockService";
 
@@ -265,6 +267,36 @@ export default function ProductsPage({ products = [], onSaveProducts, inventory 
               </button>
             )}
           </div>
+
+          {/* Mobile Filter Chips matching Screen 7 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {categories.map(cat => {
+              const count = cat === "All" ? products.length : products.filter(p => p.category === cat).length;
+              const isActive = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
           <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
             Showing {filtered.length} of {products.length} products • Inventory Single Source of Truth
           </span>
@@ -379,57 +411,44 @@ export default function ProductsPage({ products = [], onSaveProducts, inventory 
               </div>
             }
             mobileView={
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                 {filtered.map(p => {
                   const inv = (inventory || []).find(i => 
                     (i.product && i.product.toLowerCase() === (p.name || "").toLowerCase()) || 
                     (i.sku && i.sku.toLowerCase() === (p.id || p.productId || "").toLowerCase())
                   );
                   const metrics = calculateProductStock(p, inv);
-                  const isOut = metrics.status === "Out of Stock";
-                  const isLow = metrics.status === "Low Stock";
                   const uom = p.unitOfMeasure || p.unit || "Units";
                   const pId = p.id || p.productId;
 
                   return (
                     <MobileRecordCard
                       key={pId}
-                      idBadge={pId}
-                      title={p.name}
-                      subtitle={inv?.location || inv?.warehouseLocation || p.warehouseLocation || "Main Warehouse"}
-                      categoryBadge={p.category}
-                      statusBadge={
-                        <span className={`badge ${metrics.status === "Not set" ? "muted" : isOut ? "danger" : isLow ? "warning" : "success"}`} style={{ fontSize: 11 }}>
-                          {metrics.status}
-                        </span>
-                      }
-                      primaryMetrics={[
-                        { label: "Current Stock", value: `${metrics.currentAvailableStock.toLocaleString("en-IN")} ${uom}`, color: isOut ? "var(--danger)" : isLow ? "var(--warning)" : "var(--primary)" },
-                        { label: "Selling Rate", value: `₹${Number(p.price || p.sellingPrice || 0).toLocaleString("en-IN")}`, isMoney: true },
-                        { label: "Cost Price", value: `₹${Number(p.costPrice || p.purchasePrice || 0).toLocaleString("en-IN")}`, isMoney: true },
-                      ]}
-                      expandedDetails={
-                        <div>
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Safety Reorder Threshold</span>
-                            <span className="mobile-record-detail-val">{metrics.minStock !== null ? `${metrics.minStock} ${uom}` : "Not set"}</span>
-                          </div>
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Inventory Valuation</span>
-                            <span className="mobile-record-detail-val">₹{metrics.valuation.toLocaleString("en-IN")}</span>
-                          </div>
+                      avatar={
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          background: "#f1f5f9",
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden"
+                        }}>
+                          <Package size={20} style={{ color: "var(--primary)" }} />
                         </div>
                       }
-                      actions={
-                        <button
-                          type="button"
-                          className="primary"
-                          onClick={() => handleOpenEdit(p)}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-                        >
-                          <Pencil size={14} /> Edit
-                        </button>
+                      title={p.name}
+                      subtitle={`${pId} • ₹${Number(p.price || p.sellingPrice || 0).toLocaleString("en-IN")}/${uom}`}
+                      statusBadge={
+                        <StatusPill
+                          status={metrics.status}
+                          label={`Stock: ${metrics.currentAvailableStock.toLocaleString("en-IN")} ${uom}`}
+                        />
                       }
+                      showChevron={true}
+                      onClick={() => setViewingProduct(p)}
                     />
                   );
                 })}
@@ -438,6 +457,12 @@ export default function ProductsPage({ products = [], onSaveProducts, inventory 
           />
         )}
       </div>
+
+      {/* Mobile Sticky Primary Action Button matching Screen 7 */}
+      <MobilePrimaryAction
+        label="Add Product"
+        onClick={handleOpenAdd}
+      />
 
       <ProductDetailsModal
         isOpen={!!viewingProduct}

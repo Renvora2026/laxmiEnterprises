@@ -124,34 +124,41 @@ export default function InventoryModal({
         onClick={e => e.stopPropagation()}
         style={{
           maxWidth: 580,
-          width: "95vw",
-          maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden"
         }}
       >
         {/* Header */}
-        <div className="modal-header" style={{ flexShrink: 0 }}>
-          <h3 style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-            <Boxes size={19} style={{ color: "var(--primary)" }} />
-            Record Stock Movement
-          </h3>
+        <div className="modal-header" style={{ flexShrink: 0, padding: "12px 18px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(0, 91, 181, 0.1)", color: "var(--primary)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <Boxes size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Record Stock Movement
+              </h3>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Inward procurement receipts & outward SKU dispatches
+              </span>
+            </div>
+          </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close">
             <X size={17} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
-          <div className="modal-body" style={{ flex: 1, overflowY: "auto", padding: "18px 20px" }}>
+          <div className="modal-body" style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px 14px" }}>
             <ValidationSummary errors={errors} title="Please fix the following:" />
 
             {/* Movement Type Toggle */}
-            <div className="form-group" style={{ marginBottom: 18 }}>
-              <label style={{ marginBottom: 8, display: "block", fontWeight: 700 }}>
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
+              <label style={{ marginBottom: 8, display: "block", fontWeight: 700, fontSize: "0.82rem" }}>
                 Movement Type <RequiredStar />
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
                   { id: "inward", label: "Inward (+ Stock In)", icon: TrendingUp, color: "#059669" },
                   { id: "outward", label: "Outward (- Stock Out)", icon: TrendingDown, color: "#ef4444" },
@@ -163,20 +170,22 @@ export default function InventoryModal({
                       key={opt.id}
                       onClick={() => handleFieldChange("movementType", opt.id)}
                       style={{
-                        padding: "10px 14px",
+                        padding: "10px 12px",
                         borderRadius: 8,
                         border: active ? `2px solid ${opt.color}` : "1px solid var(--border)",
                         background: active ? `rgba(${opt.id === "inward" ? "16,185,129" : "239,68,68"},0.08)` : "var(--bg)",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
-                        gap: 10,
+                        justifyContent: "center",
+                        gap: 8,
                         transition: "all 0.15s",
                         userSelect: "none",
+                        minHeight: 44
                       }}
                     >
-                      <Icon size={18} style={{ color: active ? opt.color : "var(--text-muted)" }} />
-                      <span style={{ fontWeight: 700, fontSize: "0.87rem", color: active ? opt.color : "var(--text-main)" }}>
+                      <Icon size={17} style={{ color: active ? opt.color : "var(--text-muted)", flexShrink: 0 }} />
+                      <span style={{ fontWeight: 700, fontSize: "0.85rem", color: active ? opt.color : "var(--text-main)", whiteSpace: "nowrap" }}>
                         {opt.label}
                       </span>
                     </div>
@@ -185,10 +194,10 @@ export default function InventoryModal({
               </div>
             </div>
 
-            {/* Product Selection — strict dropdown with shortcut to add product */}
-            <div className="form-group full" style={{ marginBottom: 16 }}>
+            {/* Product Selection Section Card */}
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <label style={{ margin: 0, fontWeight: 700 }}>
+                <label style={{ margin: 0, fontWeight: 700, fontSize: "0.82rem" }}>
                   Product from Catalogue <RequiredStar />
                 </label>
                 {onOpenAddProduct && (
@@ -199,7 +208,7 @@ export default function InventoryModal({
                       background: "none",
                       border: "none",
                       color: "var(--primary)",
-                      fontSize: "0.82rem",
+                      fontSize: "0.78rem",
                       fontWeight: 600,
                       cursor: "pointer",
                       padding: 0,
@@ -212,12 +221,12 @@ export default function InventoryModal({
               </div>
               {products.length === 0 ? (
                 <div style={{
-                  padding: "12px 16px",
+                  padding: "10px 14px",
                   background: "rgba(245,158,11,0.08)",
                   border: "1px solid rgba(245,158,11,0.3)",
                   borderRadius: 8,
                   color: "#b45309",
-                  fontSize: "0.85rem",
+                  fontSize: "0.82rem",
                   display: "flex",
                   gap: 8,
                   alignItems: "center"
@@ -240,6 +249,7 @@ export default function InventoryModal({
                   className={`form-select ${errors.productId ? "is-invalid" : ""}`}
                   value={form.productId}
                   onChange={e => handleProductChange(e.target.value)}
+                  style={{ width: "100%", maxWidth: "100%", textOverflow: "ellipsis" }}
                   required
                 >
                   <option value="">-- Select Product from Catalogue --</option>
@@ -248,165 +258,153 @@ export default function InventoryModal({
                     const isLow = stock <= Number(p.minStock || 10);
                     return (
                       <option key={p.id} value={p.id}>
-                        {p.name} [{p.id}] — Stock: {stock} {p.unit || "units"}
-                        {isLow ? " ⚠️ LOW" : ""}
-                        {" | "}{p.category || "General"}
+                        {p.name} [{p.id}] — Stock: {stock} {p.unit || "units"}{isLow ? " ⚠️ LOW" : ""}
                       </option>
                     );
                   })}
                 </select>
               )}
               <FieldError error={errors.productId} />
-            </div>
 
-            {/* Current Stock Info Banner */}
-            {selectedProduct && (
-              <div style={{
-                padding: "10px 14px",
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                marginBottom: 16,
-                fontSize: "0.82rem",
-                display: "flex",
-                gap: 16,
-                flexWrap: "wrap",
-                alignItems: "center"
-              }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Package size={14} style={{ color: "var(--primary)" }} />
-                  <b>{selectedProduct.name}</b>
-                </span>
-                <span>Category: <b>{selectedProduct.category || "General"}</b></span>
-                <span>SKU: <b style={{ fontFamily: "monospace" }}>{selectedProduct.sku || selectedProduct.id}</b></span>
-                <span style={{
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  fontWeight: 700,
-                  fontSize: "0.78rem",
-                  background: currentStock <= 0 ? "rgba(239,68,68,0.12)" : currentStock <= 10 ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)",
-                  color: currentStock <= 0 ? "#ef4444" : currentStock <= 10 ? "#d97706" : "#059669",
+              {/* Current Stock Info Banner */}
+              {selectedProduct && (
+                <div style={{
+                  padding: "10px 12px",
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  marginTop: 10,
+                  fontSize: "0.82rem",
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between"
                 }}>
-                  Current Stock: {currentStock} {selectedProduct.unit || "units"}
-                </span>
-              </div>
-            )}
-
-            <div className="form-grid">
-              {/* Quantity */}
-              <div className="form-group">
-                <label>
-                  {isOutward ? "Dispatch Quantity (−)" : "Inward Quantity (+)"} <RequiredStar />
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  className={`form-input ${errors.quantity ? "is-invalid" : ""}`}
-                  value={form.quantity}
-                  onChange={e => handleFieldChange("quantity", e.target.value)}
-                  placeholder="Enter quantity"
-                  required
-                />
-                <FieldError error={errors.quantity} />
-                {selectedProduct && adjustmentNumber > 0 && (
-                  <span className="form-help" style={{
-                    color: isOutward ? "#ef4444" : "#059669",
-                    fontWeight: 700
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: "1 1 auto" }}>
+                    <Package size={15} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                    <b style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedProduct.name}</b>
+                  </div>
+                  <span style={{
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                    fontWeight: 700,
+                    fontSize: "0.76rem",
+                    whiteSpace: "nowrap",
+                    background: currentStock <= 0 ? "rgba(239,68,68,0.12)" : currentStock <= 10 ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)",
+                    color: currentStock <= 0 ? "#ef4444" : currentStock <= 10 ? "#d97706" : "#059669",
                   }}>
-                    After movement: {afterAdjustment} {selectedProduct.unit || "units"}
+                    Current Stock: {currentStock} {selectedProduct.unit || "units"}
                   </span>
-                )}
-              </div>
-
-              {/* Warehouse Location */}
-              <div className="form-group">
-                <label>Warehouse Bay / Location <RequiredStar /></label>
-                <input
-                  className={`form-input ${errors.warehouseLocation ? "is-invalid" : ""}`}
-                  value={form.warehouseLocation}
-                  onChange={e => handleFieldChange("warehouseLocation", e.target.value)}
-                  placeholder="e.g. Warehouse A - Bay 01"
-                />
-                <FieldError error={errors.warehouseLocation} />
-              </div>
-
-              {/* Reason / Notes */}
-              <div className="form-group full">
-                <label>Reason / Remarks (optional)</label>
-                <input
-                  className="form-input"
-                  value={form.reason}
-                  onChange={e => handleFieldChange("reason", e.target.value)}
-                  placeholder={isOutward ? "e.g. Dispatched to client / Damaged goods" : "e.g. Purchase from supplier / Goods receipt"}
-                />
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* After-movement preview */}
-            {selectedProduct && adjustmentNumber > 0 && (
-              <div style={{
-                padding: "10px 14px",
-                borderRadius: 8,
-                marginTop: 4,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                fontSize: "0.85rem",
-                background: isOutward ? "rgba(239,68,68,0.06)" : "rgba(16,185,129,0.06)",
-                border: `1px solid ${isOutward ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
-              }}>
-                <Info size={15} style={{ color: isOutward ? "#ef4444" : "#059669" }} />
-                <span>
-                  <b>{selectedProduct.name}</b>:{" "}
-                  {currentStock} → <b style={{ color: isOutward ? "#ef4444" : "#059669" }}>{afterAdjustment}</b>{" "}
-                  {selectedProduct.unit || "units"}
-                  {isOutward && afterAdjustment <= 0 && <span style={{ color: "#ef4444", marginLeft: 8 }}>⚠️ Will reach zero</span>}
-                </span>
+            {/* Movement Details Card */}
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
+              <div className="form-grid">
+                {/* Quantity */}
+                <div className="form-group">
+                  <label>
+                    {isOutward ? "Dispatch Quantity (−)" : "Inward Quantity (+)"} <RequiredStar />
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className={`form-input ${errors.quantity ? "is-invalid" : ""}`}
+                    value={form.quantity}
+                    onChange={e => handleFieldChange("quantity", e.target.value)}
+                    placeholder="Enter quantity"
+                    required
+                  />
+                  <FieldError error={errors.quantity} />
+                  {selectedProduct && adjustmentNumber > 0 && (
+                    <span className="form-help" style={{
+                      color: isOutward ? "#ef4444" : "#059669",
+                      fontWeight: 700
+                    }}>
+                      After movement: {afterAdjustment} {selectedProduct.unit || "units"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Warehouse Location */}
+                <div className="form-group">
+                  <label>Warehouse Bay / Location <RequiredStar /></label>
+                  <input
+                    className={`form-input ${errors.warehouseLocation ? "is-invalid" : ""}`}
+                    value={form.warehouseLocation}
+                    onChange={e => handleFieldChange("warehouseLocation", e.target.value)}
+                    placeholder="e.g. Warehouse A - Bay 01"
+                  />
+                  <FieldError error={errors.warehouseLocation} />
+                </div>
+
+                {/* Reason / Notes */}
+                <div className="form-group full">
+                  <label>Reason / Remarks (optional)</label>
+                  <input
+                    className="form-input"
+                    value={form.reason}
+                    onChange={e => handleFieldChange("reason", e.target.value)}
+                    placeholder={isOutward ? "e.g. Dispatched to client / Damaged goods" : "e.g. Purchase from supplier / Goods receipt"}
+                  />
+                </div>
               </div>
-            )}
+
+              {/* After-movement preview */}
+              {selectedProduct && adjustmentNumber > 0 && (
+                <div style={{
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  marginTop: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: "0.82rem",
+                  background: isOutward ? "rgba(239,68,68,0.06)" : "rgba(16,185,129,0.06)",
+                  border: `1px solid ${isOutward ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
+                }}>
+                  <Info size={15} style={{ color: isOutward ? "#ef4444" : "#059669", flexShrink: 0 }} />
+                  <span>
+                    Stock Result: {currentStock} → <b style={{ color: isOutward ? "#ef4444" : "#059669" }}>{afterAdjustment}</b> {selectedProduct.unit || "units"}
+                    {isOutward && afterAdjustment <= 0 && <span style={{ color: "#ef4444", marginLeft: 8 }}>⚠️ Will reach zero</span>}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="modal-footer" style={{
-            flexShrink: 0,
-            borderTop: "1px solid var(--border)",
-            padding: "14px 20px",
-            background: "var(--surface)",
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 12,
-            marginTop: "auto"
-          }}>
-            <button type="button" className="outline" onClick={onClose} disabled={isSubmitting} style={{ minWidth: 100 }}>
-              Cancel
-            </button>
+          {/* Sticky Modal Action Footer with Clear Hierarchy */}
+          <div className="modal-footer mobile-modal-footer-hierarchical">
             <button
               type="submit"
-              className="primary"
+              className="primary footer-primary-btn"
               disabled={products.length === 0 || isSubmitting}
               style={{
                 background: isOutward ? "#ef4444" : undefined,
-                minWidth: 180,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
                 opacity: isSubmitting ? 0.75 : 1,
                 cursor: isSubmitting ? "not-allowed" : "pointer"
               }}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={15} className="spinner" />
+                  <Loader2 size={16} className="spinner" />
                   <span>Processing...</span>
                 </>
               ) : (
                 <>
-                  <Save size={15} />
+                  <Save size={16} />
                   <span>{isOutward ? "Record Outward Dispatch" : "Record Inward Receipt"}</span>
                 </>
               )}
             </button>
+            <div className="footer-secondary-row">
+              <button type="button" className="outline" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
       </div>

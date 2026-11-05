@@ -28,8 +28,8 @@ export function useViewport() {
 
   return {
     width,
-    isMobile: width <= 600,
-    isTablet: width > 600 && width <= 1024,
+    isMobile: width < 768,
+    isTablet: width >= 768 && width <= 1024,
     isDesktop: width >= 1025,
   };
 }

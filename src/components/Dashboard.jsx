@@ -167,7 +167,7 @@ export default function Dashboard({
   return (
     <div className="page">
       {/* Top Banner Actions */}
-      <div className="page-actions" style={{ flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+      <div className="page-actions mobile-visible" style={{ flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
         <span className="date-pill">{data?.fiscalYear || `${getFiscalYearFormatted(getToday())} • Corporate Overview`}</span>
         <button
           type="button"

@@ -183,28 +183,38 @@ export default function ClientModal({ isOpen, onClose, onSave, clientToEdit, nex
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 740, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div className="modal-header">
-          <h3>
-            <Users size={19} style={{ color: "var(--primary)" }} />
-            {isEditing ? `Edit Client: ${clientToEdit.name}` : "Add New Client Account"}
-          </h3>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 740, maxHeight: "94vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Sticky Header */}
+        <div className="modal-header" style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(0, 91, 181, 0.1)", color: "var(--primary)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <Users size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {isEditing ? `Edit Client: ${clientToEdit.name}` : "Add New Client Account"}
+              </h3>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Enterprise customer registry & billing profile
+              </span>
+            </div>
+          </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             <X size={17} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
-          <div className="modal-body" ref={modalBodyRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "16px 20px" }}>
+          <div className="modal-body" ref={modalBodyRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "14px 14px" }}>
             
             <ValidationSummary errors={errors} title="Please resolve the following client errors:" />
 
             {/* Step 1: Sleek Category Selector Tabs */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 800, marginBottom: 6, display: "block", color: "var(--text-main)" }}>
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-main)" }}>
                 Select Client Category / Type <RequiredStar />
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                 {[
                   { type: "Feed Shop", label: "Feed Shop", sub: "पशूखाद्य दुकान", icon: Wheat, color: "#059669", bg: "rgba(16, 185, 129, 0.12)" },
                   { type: "Dairy", label: "Dairy", sub: "दूध डेअरी", icon: Milk, color: "#0284c7", bg: "rgba(2, 132, 199, 0.12)" },
@@ -222,20 +232,21 @@ export default function ClientModal({ isOpen, onClose, onSave, clientToEdit, nex
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        padding: "9px 6px",
-                        borderRadius: 10,
-                        border: isSelected ? `2px solid ${item.color}` : "1.5px solid var(--border)",
-                        background: isSelected ? item.bg : "var(--card-bg)",
+                        padding: "8px 4px",
+                        borderRadius: 8,
+                        border: isSelected ? `2px solid ${item.color}` : "1px solid var(--border)",
+                        background: isSelected ? item.bg : "var(--bg)",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
-                        textAlign: "center"
+                        textAlign: "center",
+                        minHeight: 46
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 5, color: isSelected ? item.color : "var(--text-main)", fontWeight: 700, fontSize: 13 }}>
-                        <Icon size={16} />
+                        <Icon size={15} />
                         <span>{item.label}</span>
                       </div>
-                      <span style={{ fontSize: 11, color: isSelected ? item.color : "var(--text-muted)", marginTop: 2 }}>{item.sub}</span>
+                      <span style={{ fontSize: 10.5, color: isSelected ? item.color : "var(--text-muted)", marginTop: 2 }}>{item.sub}</span>
                     </button>
                   );
                 })}
@@ -243,9 +254,9 @@ export default function ClientModal({ isOpen, onClose, onSave, clientToEdit, nex
             </div>
 
             {/* Step 2: Common Information */}
-            <div style={{ marginTop: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--primary)", borderBottom: "1.5px solid var(--border)", paddingBottom: 6, marginBottom: 12, display: "flex", alignItems: "center", gap: 7 }}>
-                <Building2 size={15} /> Common Information
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
+              <div className="mobile-form-section-title">
+                <Building2 size={15} style={{ color: "var(--primary)" }} /> Common Information
               </div>
 
               <div className="form-grid">
@@ -532,9 +543,9 @@ export default function ClientModal({ isOpen, onClose, onSave, clientToEdit, nex
             </div>
 
             {/* Step 4: Commercial & Account Details */}
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-muted)", borderBottom: "1.5px solid var(--border)", paddingBottom: 6, marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
-                <CreditCard size={15} /> Commercial & Payment Terms
+            <div className="mobile-form-section-card" style={{ marginBottom: 12 }}>
+              <div className="mobile-form-section-title">
+                <CreditCard size={15} style={{ color: "var(--primary)" }} /> Commercial & Payment Terms
               </div>
 
               <div className="form-grid">
@@ -610,41 +621,21 @@ export default function ClientModal({ isOpen, onClose, onSave, clientToEdit, nex
             </div>
           </div>
 
-          <div
-            className="modal-footer"
-            style={{
-              flexShrink: 0,
-              padding: "14px 20px",
-              background: "var(--card-bg)",
-              borderTop: "1px solid var(--border)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              zIndex: 10
-            }}
-          >
-            <div>
-              {Object.keys(errors).length > 0 && (
-                <div style={{ color: "var(--danger)", fontSize: "0.84rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                  <AlertTriangle size={15} />
-                  <span>{errors.name || errors.id || Object.values(errors)[0]}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
+          {/* Sticky Modal Action Footer with Clear Hierarchy */}
+          <div className="modal-footer mobile-modal-footer-hierarchical">
+            <button
+              type="submit"
+              id="create-client-btn"
+              className="primary footer-primary-btn"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              style={{ cursor: isSubmitting ? "not-allowed" : "pointer", touchAction: "manipulation" }}
+            >
+              <Save size={16} /> {isSubmitting ? "Saving..." : (isEditing ? "Save Client Details" : "Create Client Account")}
+            </button>
+            <div className="footer-secondary-row">
               <button type="button" className="outline" onClick={onClose} disabled={isSubmitting}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                id="create-client-btn"
-                className="primary"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                style={{ cursor: isSubmitting ? "not-allowed" : "pointer", touchAction: "manipulation", minWidth: 160 }}
-              >
-                <Save size={15} /> {isSubmitting ? "Saving..." : (isEditing ? "Save Client Details" : "Create Client Account")}
               </button>
             </div>
           </div>

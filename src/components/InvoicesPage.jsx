@@ -13,6 +13,8 @@ import RecordPaymentModal from "./RecordPaymentModal";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { formatIndianCurrency, formatDate } from "../utils/formatters";
 import { getToday, getFiscalYearFormatted, getFiscalYearOptions } from "../constants/erpConstants";
 import "./InvoicesPage.css";
@@ -370,6 +372,36 @@ export default function InvoicesPage({
               </button>
             )}
           </div>
+
+          {/* Mobile Filter Chips matching Screens 5 & 9 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {["All", "Paid", "Pending", "Unpaid"].map(st => {
+              const count = st === "All" ? periodInvoices.length : periodInvoices.filter(i => (i.status || i.paymentStatus || "Unpaid").toLowerCase() === st.toLowerCase()).length;
+              const isActive = statusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
           <div>
             <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
               {viewTab === "collections"
@@ -591,7 +623,7 @@ export default function InvoicesPage({
             }
             /* MOBILE RECORD CARDS VIEW */
             mobileView={
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                 {filteredInvoices.map((inv) => {
                   const client = clients.find(c => c.id === inv.clientId || c.clientId === inv.clientId || c.name === inv.clientName);
                   const status = inv.status || inv.paymentStatus || "Unpaid";
@@ -603,69 +635,26 @@ export default function InvoicesPage({
                   return (
                     <MobileRecordCard
                       key={invId}
-                      idBadge={invId}
-                      title={inv.clientName || client?.name || "Client Account"}
-                      subtitle={`Due: ${formatDate(inv.dueDate || inv.invoiceDate)}`}
-                      categoryBadge={inv.clientType || client?.clientType || "Feed Shop"}
-                      statusBadge={
-                        <span className={`badge ${status === "Paid" ? "paid" : (status === "Overdue" ? "overdue" : "pending-payment")}`} style={{ fontSize: 11 }}>
-                          {status}
-                        </span>
-                      }
-                      primaryMetrics={[
-                        { label: "Grand Total", value: formatIndianCurrency(grand), isMoney: true },
-                        { label: "Paid", value: formatIndianCurrency(paid), color: "#10b981", isMoney: true },
-                        { label: "Balance Due", value: formatIndianCurrency(balance), color: balance > 0 ? "var(--danger)" : "var(--success)", isMoney: true },
-                      ]}
-                      expandedDetails={
-                        <div>
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Taxable Amount</span>
-                            <span className="mobile-record-detail-val">{formatIndianCurrency(inv.taxableTotal ?? inv.subtotal ?? 0)}</span>
-                          </div>
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">GST</span>
-                            <span className="mobile-record-detail-val">{formatIndianCurrency(inv.gstTotal ?? inv.tax ?? 0)}</span>
-                          </div>
-                          {inv.paymentMode && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Payment Mode</span>
-                              <span className="mobile-record-detail-val">{inv.paymentMode}</span>
-                            </div>
-                          )}
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Issue Date</span>
-                            <span className="mobile-record-detail-val">{formatDate(inv.invoiceDate || inv.date)}</span>
-                          </div>
+                      avatar={
+                        <div style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 8,
+                          background: "rgba(0, 91, 181, 0.1)",
+                          color: "var(--primary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          <Receipt size={18} />
                         </div>
                       }
-                      actions={
-                        <>
-                          <button
-                            type="button"
-                            className="outline"
-                            onClick={() => {
-                              try {
-                                generateInvoicePDF(inv, company, client);
-                                notify(`✓ Downloaded PDF for Invoice ${invId}`);
-                              } catch (e) {
-                                notify(`Failed to generate PDF: ${e.message}`);
-                              }
-                            }}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-                          >
-                            <Download size={14} /> PDF
-                          </button>
-                          <button
-                            type="button"
-                            className="primary"
-                            onClick={() => setSelectedInvoice(inv)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-                          >
-                            <Eye size={14} /> View Invoice
-                          </button>
-                        </>
-                      }
+                      title={invId}
+                      subtitle={`${inv.clientName || client?.name || "Client Account"} • ${formatDate(inv.invoiceDate || inv.date)}`}
+                      amount={formatIndianCurrency(grand)}
+                      statusBadge={<StatusPill status={status} />}
+                      showChevron={true}
+                      onClick={() => setSelectedInvoice(inv)}
                     />
                   );
                 })}
@@ -675,25 +664,36 @@ export default function InvoicesPage({
         )}
       </div>
 
-      {/* INVOICE VIEW MODAL */}
-      <InvoiceViewModal
-        isOpen={!!selectedInvoice}
-        onClose={() => setSelectedInvoice(null)}
-        invoice={selectedInvoice}
-        company={company}
-        client={clients.find(c => c.id === selectedInvoice?.clientId || c.clientId === selectedInvoice?.clientId || c.name === selectedInvoice?.clientName)}
-        onEdit={(inv) => {
-          setSelectedInvoice(null);
-          setEditInvoice(inv);
-          setIsCreateModalOpen(true);
+      {/* Mobile Sticky Primary Action Button matching Screens 5 & 9 */}
+      <MobilePrimaryAction
+        label="New Invoice"
+        onClick={() => {
+          if (onOpenCreateInvoice) onOpenCreateInvoice();
+          else setIsCreateModalOpen(true);
         }}
-        onRecordPayment={(inv) => {
-          setSelectedInvoice(null);
-          setPaymentInvoice(inv);
-        }}
-        showToast={notify}
-        onRefresh={onRefresh}
       />
+
+      {/* INVOICE VIEW MODAL */}
+      {selectedInvoice && (
+        <InvoiceViewModal
+          isOpen={!!selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          invoice={selectedInvoice}
+          company={company}
+          client={clients.find(c => c.id === selectedInvoice?.clientId || c.clientId === selectedInvoice?.clientId || c.name === selectedInvoice?.clientName)}
+          onEdit={(inv) => {
+            setSelectedInvoice(null);
+            setEditInvoice(inv);
+            setIsCreateModalOpen(true);
+          }}
+          onRecordPayment={(inv) => {
+            setSelectedInvoice(null);
+            setPaymentInvoice(inv);
+          }}
+          showToast={notify}
+          onRefresh={onRefresh}
+        />
+      )}
 
       {/* CREATE / EDIT MODAL */}
       <InvoiceModal

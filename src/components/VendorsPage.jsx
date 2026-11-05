@@ -10,6 +10,8 @@ import ExportMenu from "./ExportMenu";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { downloadCSV } from "../utils/exportUtils";
 import { erpApi } from "../services/api";
 
@@ -24,6 +26,7 @@ export const normalizeVendorCategory = (cat) => {
 export default function VendorsPage({ vendors = [], onSaveVendors }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
   const [viewingVendor, setViewingVendor] = useState(null);
@@ -53,8 +56,11 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
     return (vendors || []).filter(v => {
       const vCat = normalizeVendorCategory(v.category);
       const matchesCat = categoryFilter === "All" || vCat === categoryFilter;
+      const isActive = (v.status || "Active") === "Active";
+      const matchesStatus = statusFilter === "All" || (statusFilter === "Active" ? isActive : !isActive);
+      if (!matchesCat || !matchesStatus) return false;
       const q = search.toLowerCase().trim();
-      if (!q) return matchesCat;
+      if (!q) return true;
 
       const name = (v.name || "").toLowerCase();
       const comp = (v.companyName || "").toLowerCase();
@@ -73,9 +79,9 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
         gstin.includes(q) ||
         city.includes(q);
 
-      return matchesCat && matchesSearch;
+      return matchesSearch;
     });
-  }, [vendors, categoryFilter, search]);
+  }, [vendors, categoryFilter, statusFilter, search]);
 
   const totalVendors = vendors.length;
   const feedSuppliers = vendors.filter(v => normalizeVendorCategory(v.category) === "Feed Manufacturer").length;
@@ -246,6 +252,36 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
               </button>
             )}
           </div>
+
+          {/* Mobile Filter Chips matching Screen 3 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {["All", "Active", "Inactive"].map(st => {
+              const count = st === "All" ? vendors.length : vendors.filter(v => (v.status || "Active") === st).length;
+              const isActive = statusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
           <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
             Showing {filtered.length} of {vendors.length} vendors
           </span>
@@ -383,7 +419,7 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
             }
             /* MOBILE RECORD CARDS VIEW */
             mobileView={
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                 {filtered.map(v => {
                   const idStr = v.vendorId || v.id;
                   const isActive = (v.status || "Active") === "Active";
@@ -391,50 +427,27 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
                   return (
                     <MobileRecordCard
                       key={idStr}
-                      idBadge={idStr}
-                      title={v.name}
-                      subtitle={v.companyName && v.companyName !== v.name ? v.companyName : (v.city || "Maharashtra")}
-                      categoryBadge={normalizeVendorCategory(v.category)}
-                      statusBadge={
-                        <span className={`badge ${isActive ? "success" : "neutral"}`} style={{ fontSize: 11 }}>
-                          {isActive ? "Active" : "Inactive"}
-                        </span>
-                      }
-                      primaryMetrics={[
-                        { label: "Contact", value: v.phone || v.contact ? <a href={`tel:${v.phone || v.contact}`} style={{ color: "var(--primary)", textDecoration: "none" }}>{v.phone || v.contact}</a> : "—" },
-                        { label: "Person", value: v.contactPerson || "Sales Desk" },
-                        { label: "Terms", value: v.paymentTerms || "Net 15" },
-                      ]}
-                      expandedDetails={
-                        <div>
-                          {v.gstin && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">GSTIN</span>
-                              <span className="mobile-record-detail-val" style={{ fontFamily: "monospace" }}>{v.gstin}</span>
-                            </div>
-                          )}
-                          {v.email && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Email</span>
-                              <span className="mobile-record-detail-val">{v.email}</span>
-                            </div>
-                          )}
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Location</span>
-                            <span className="mobile-record-detail-val">{v.city || v.village || "Maharashtra"}</span>
-                          </div>
+                      avatar={
+                        <div style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: "50%",
+                          background: "rgba(99, 102, 241, 0.12)",
+                          color: "#6366f1",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 700,
+                          fontSize: "15px"
+                        }}>
+                          {(v.name || "V")[0].toUpperCase()}
                         </div>
                       }
-                      actions={
-                        <button
-                          type="button"
-                          className="outline btn-sm"
-                          onClick={() => setViewingVendor(v)}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-                        >
-                          <Eye size={14} /> View Details
-                        </button>
-                      }
+                      title={v.name}
+                      subtitle={v.companyName && v.companyName !== v.name ? v.companyName : normalizeVendorCategory(v.category)}
+                      statusBadge={<StatusPill status={isActive ? "Active" : "Inactive"} />}
+                      showChevron={true}
+                      onClick={() => setViewingVendor(v)}
                     />
                   );
                 })}
@@ -443,6 +456,12 @@ export default function VendorsPage({ vendors = [], onSaveVendors }) {
           />
         )}
       </div>
+
+      {/* Mobile Sticky Primary Action Button matching Screen 3 */}
+      <MobilePrimaryAction
+        label="Add Vendor"
+        onClick={handleOpenAdd}
+      />
 
       {/* VENDOR DETAILS VIEW MODAL */}
       <VendorDetailsModal

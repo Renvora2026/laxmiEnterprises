@@ -11,6 +11,8 @@ import ExportMenu from "./ExportMenu";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { downloadCSV } from "../utils/exportUtils";
 import { erpApi } from "../services/api";
 import { formatDate } from "../utils/formatters";
@@ -373,6 +375,40 @@ export default function InventoryPage({ inventory = [], onSaveInventory, product
               </button>
             )}
           </div>
+
+          {/* Mobile Filter Chips matching Screen 8 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {["All", "In Stock", "Low Stock"].map(st => {
+              const count = st === "All" ? combinedProducts.length : combinedProducts.filter(p => {
+                const bal = Number(p.currentStock || 0);
+                const reorder = p.reorderLevel ? Number(p.reorderLevel) : 10;
+                return st === "Low Stock" ? bal <= reorder : bal > reorder;
+              }).length;
+              const isActive = statusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
           <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 600 }}>
             {viewMode === "movements"
               ? `Showing ${filteredMovements.length} of ${movements.length} logged stock transactions`
@@ -615,7 +651,7 @@ export default function InventoryPage({ inventory = [], onSaveInventory, product
                 </div>
               }
               mobileView={
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                   {filteredProducts.map(p => {
                     const uom = p.unitOfMeasure || p.unit || "Units";
                     const balance = Number(p.currentStock || 0);
@@ -630,30 +666,30 @@ export default function InventoryPage({ inventory = [], onSaveInventory, product
                     return (
                       <MobileRecordCard
                         key={pId}
-                        idBadge={pId}
+                        avatar={
+                          <div style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 8,
+                            background: "#f1f5f9",
+                            border: "1px solid var(--border)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}>
+                            <Package size={18} style={{ color: "var(--primary)" }} />
+                          </div>
+                        }
                         title={p.name}
-                        subtitle={p.warehouseLocation || "Godown Bay A-1"}
-                        categoryBadge={p.category || "General"}
+                        subtitle={pId}
                         statusBadge={
-                          <span className={`badge ${isNotSet ? "muted" : isOut ? "danger" : isLow ? "warning" : "success"}`} style={{ fontSize: 11 }}>
-                            {statusText}
-                          </span>
+                          <StatusPill
+                            status={statusText}
+                            label={`${balance.toLocaleString("en-IN")} ${uom}`}
+                          />
                         }
-                        primaryMetrics={[
-                          { label: "Current Stock", value: `${balance.toLocaleString("en-IN")} ${uom}`, color: isOut ? "var(--danger)" : isLow ? "var(--warning)" : "var(--primary)" },
-                          { label: "Reorder Alert", value: hasReorder ? `${reorderNum} ${uom}` : "Not set" },
-                          { label: "Location", value: p.warehouseLocation || "Bay A-1" },
-                        ]}
-                        actions={
-                          <button
-                            type="button"
-                            className="primary"
-                            onClick={() => handleOpenMovement(pId)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 6, width: "100%" }}
-                          >
-                            <Pencil size={14} /> Inward / Outward Stock
-                          </button>
-                        }
+                        showChevron={true}
+                        onClick={() => setViewingInventoryProduct(p)}
                       />
                     );
                   })}
@@ -663,6 +699,12 @@ export default function InventoryPage({ inventory = [], onSaveInventory, product
           )
         )}
       </div>
+
+      {/* Mobile Sticky Primary Action Button matching Screen 8 */}
+      <MobilePrimaryAction
+        label="Record Movement"
+        onClick={handleOpenAdd}
+      />
 
       <InventoryDetailsModal
         isOpen={!!viewingInventoryProduct}

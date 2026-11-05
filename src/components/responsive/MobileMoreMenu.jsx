@@ -2,7 +2,8 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Truck, ShoppingCart, MessageCircle, IndianRupee, Package,
-  ShieldCheck, X, RefreshCw, Moon, Sun, LogOut, ChevronRight, Wallet
+  ShieldCheck, X, RefreshCw, Moon, Sun, LogOut, ChevronRight,
+  Wallet, Settings, User, HelpCircle, Building2
 } from "lucide-react";
 
 export default function MobileMoreMenu({
@@ -39,14 +40,14 @@ export default function MobileMoreMenu({
 
   if (!isOpen) return null;
 
-  const moreModules = [
-    { to: "/vendors", label: "Vendor Directory", sub: "Suppliers & Procurement", icon: Truck, color: "var(--primary)" },
-    { to: "/purchases", label: "Purchases & Inward", sub: "Feed & Raw Goods Bills", icon: ShoppingCart, color: "#10b981" },
-    { to: "/expo", label: "Expo Leads & WhatsApp", sub: "Visitor Registry & Campaigns", icon: MessageCircle, color: "#25D366" },
-    { to: "/revenue", label: "Revenue Intelligence", sub: "Cash Flows & Targets", icon: IndianRupee, color: "#d97706" },
-    { to: "/expenses", label: "Operating Expenses", sub: "Overhead Bills & Outflows", icon: Wallet, color: "#ef4444" },
-    { to: "/products", label: "Product Catalogue", sub: "SKUs & Unit Safety", icon: Package, color: "#6366f1" },
-    { to: "/workspace", label: "Admin Workspace", sub: "Enterprise Configuration", icon: ShieldCheck, color: "var(--primary)" },
+  const businessOperations = [
+    { to: "/vendors", label: "Vendor Directory", icon: Truck, color: "var(--primary)" },
+    { to: "/purchases", label: "Purchases & Inward", icon: ShoppingCart, color: "#10b981" },
+    { to: "/expo", label: "Expo Leads & Campaigns", icon: MessageCircle, color: "#25D366" },
+    { to: "/revenue", label: "Reports & Analytics", icon: IndianRupee, color: "#d97706" },
+    { to: "/expenses", label: "Operating Expenses", icon: Wallet, color: "#ef4444" },
+    { to: "/products", label: "Product Catalogue", icon: Package, color: "#6366f1" },
+    { to: "/workspace", label: "Admin Workspace", icon: ShieldCheck, color: "var(--primary)" },
   ];
 
   const toggleTheme = () => {
@@ -65,7 +66,7 @@ export default function MobileMoreMenu({
         {/* Sheet Header */}
         <div className="mobile-more-header">
           <div className="mobile-more-user-info">
-            <div className="profile-avatar" style={{ width: 38, height: 38, fontSize: 13 }}>
+            <div className="profile-avatar" style={{ width: 40, height: 40, fontSize: 13 }}>
               {(currentUser?.name || adminProfile?.name || "LE").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -84,78 +85,99 @@ export default function MobileMoreMenu({
           </button>
         </div>
 
-        {/* Quick Utilities Row */}
-        <div className="mobile-more-quick-bar">
-          <button
-            type="button"
-            className="mobile-quick-tool-btn"
-            onClick={toggleTheme}
-            title="Toggle Light / Dark mode"
-          >
-            {currentTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{currentTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-          </button>
+        {/* Section 1: Business Operations */}
+        <div className="mobile-more-section">
+          <div className="mobile-more-section-title">Business Operations</div>
+          <div className="mobile-more-card-group">
+            {businessOperations.map(({ to, label, icon: Icon, color }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={onClose}
+                className={({ isActive }) => `mobile-more-row-item ${isActive ? "active" : ""}`}
+              >
+                <div className="mobile-more-item-left">
+                  <div className="mobile-more-icon-wrap" style={{ background: `${color}18`, color }}>
+                    <Icon size={18} />
+                  </div>
+                  <span className="mobile-more-item-title">{label}</span>
+                </div>
+                <ChevronRight size={17} className="mobile-more-chevron" />
+              </NavLink>
+            ))}
 
-          {onRefreshAll && (
-            <button
-              type="button"
-              className="mobile-quick-tool-btn"
-              onClick={() => {
-                onRefreshAll();
-                onClose();
-              }}
-              title="Sync all data with MySQL"
-            >
-              <RefreshCw size={15} />
-              <span>Sync DB</span>
-            </button>
-          )}
+            {/* Quick Settings row */}
+            <div className="mobile-more-row-item" onClick={toggleTheme} style={{ cursor: "pointer" }}>
+              <div className="mobile-more-item-left">
+                <div className="mobile-more-icon-wrap" style={{ background: "rgba(0, 180, 216, 0.12)", color: "var(--accent)" }}>
+                  {currentTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                </div>
+                <span className="mobile-more-item-title">Settings & Theme ({currentTheme === "dark" ? "Dark" : "Light"})</span>
+              </div>
+              <ChevronRight size={17} className="mobile-more-chevron" />
+            </div>
 
-          <button
-            type="button"
-            className="mobile-quick-tool-btn danger"
-            onClick={() => {
-              onClose();
-              if (onLogout) onLogout();
-            }}
-            title="Log out"
-          >
-            <LogOut size={15} />
-            <span>Logout</span>
-          </button>
+            {onRefreshAll && (
+              <div className="mobile-more-row-item" onClick={() => { onRefreshAll(); onClose(); }} style={{ cursor: "pointer" }}>
+                <div className="mobile-more-item-left">
+                  <div className="mobile-more-icon-wrap" style={{ background: "rgba(16, 185, 129, 0.12)", color: "#10b981" }}>
+                    <RefreshCw size={17} />
+                  </div>
+                  <span className="mobile-more-item-title">Sync Live Database</span>
+                </div>
+                <ChevronRight size={17} className="mobile-more-chevron" />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Additional Modules List */}
-        <div className="mobile-more-list">
-          <div className="mobile-more-section-title">ALL MODULES</div>
-          {moreModules.map(({ to, label, sub, icon: Icon, color }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              className={({ isActive }) => `mobile-more-item ${isActive ? "active" : ""}`}
-            >
-              <div className="mobile-more-icon-wrap" style={{ background: `${color}18`, color }}>
-                <Icon size={18} />
+        {/* Section 2: Account */}
+        <div className="mobile-more-section" style={{ marginTop: 14 }}>
+          <div className="mobile-more-section-title">Account</div>
+          <div className="mobile-more-card-group">
+            <NavLink to="/workspace" onClick={onClose} className="mobile-more-row-item">
+              <div className="mobile-more-item-left">
+                <div className="mobile-more-icon-wrap" style={{ background: "rgba(0, 91, 181, 0.1)", color: "var(--primary)" }}>
+                  <User size={18} />
+                </div>
+                <span className="mobile-more-item-title">My Profile</span>
               </div>
-              <div className="mobile-more-item-text">
-                <span className="mobile-more-item-label">{label}</span>
-                <span className="mobile-more-item-sub">{sub}</span>
-              </div>
-              <ChevronRight size={16} className="mobile-more-chevron" />
+              <ChevronRight size={17} className="mobile-more-chevron" />
             </NavLink>
-          ))}
-        </div>
 
-        {/* Live Status Footer */}
-        <div className="mobile-more-status-footer">
-          <span
-            className="sidebar-status-dot"
-            style={{ background: isDbOnline ? "#10b981" : "#ef4444" }}
-          />
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            {isDbOnline ? "MySQL Connected & Protected" : "Database Offline / Retrying..."}
-          </span>
+            <div
+              className="mobile-more-row-item"
+              onClick={() => {
+                alert("Laxmi Enterprises ERP Support:\nEmail: laxmigroup616@gmail.com\nPhone: +91 99210 63187");
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="mobile-more-item-left">
+                <div className="mobile-more-icon-wrap" style={{ background: "rgba(100, 116, 139, 0.12)", color: "var(--text-muted)" }}>
+                  <HelpCircle size={18} />
+                </div>
+                <span className="mobile-more-item-title">Help & Support</span>
+              </div>
+              <ChevronRight size={17} className="mobile-more-chevron" />
+            </div>
+
+            <div
+              className="mobile-more-row-item danger"
+              onClick={() => {
+                onClose();
+                if (onLogout) onLogout();
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="mobile-more-item-left">
+                <div className="mobile-more-icon-wrap" style={{ background: "rgba(239, 68, 68, 0.12)", color: "var(--danger)" }}>
+                  <LogOut size={18} />
+                </div>
+                <span className="mobile-more-item-title" style={{ color: "var(--danger)", fontWeight: 700 }}>Logout</span>
+              </div>
+              <ChevronRight size={17} className="mobile-more-chevron" style={{ color: "var(--danger)" }} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

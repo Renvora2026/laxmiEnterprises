@@ -474,7 +474,7 @@ export default function InvoiceModal({
 
         {/* Body */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-          <div className="modal-body" style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          <div className="modal-body" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "14px 14px" }}>
             
             {/* Validation summary banner */}
             <ValidationSummary errors={errors} title="Please fix the following invoice details:" />
@@ -714,7 +714,8 @@ export default function InvoiceModal({
                 </div>
               )}
 
-              <div className="table-wrap" style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: 8 }}>
+              {/* Desktop Table View */}
+              <div className="table-wrap desktop-table-container" style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: 8 }}>
                 <table style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse", minWidth: 600 }}>
                   <thead>
                     <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
@@ -881,6 +882,149 @@ export default function InvoiceModal({
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card List View for Items */}
+              <div className="mobile-card-container" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {items.map((it, idx) => {
+                  const rowErrs = itemErrors[idx] || {};
+                  const selectedProd = products.find(p => String(p.id) === String(it.productId) || p.name === it.description);
+                  const availableStock = selectedProd ? Number(selectedProd.stock ?? selectedProd.currentStock ?? 0) : null;
+                  const isStockLow = availableStock !== null && availableStock <= 10;
+                  const isOutOfStock = availableStock !== null && availableStock <= 0;
+
+                  return (
+                    <div key={idx} style={{ background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
+                      {/* Product select row */}
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <label style={{ fontSize: 11.5, fontWeight: 700, display: "block", marginBottom: 4 }}>
+                            Product #{idx + 1} <RequiredStar />
+                          </label>
+                          <select
+                            className={`form-select ${rowErrs.description || rowErrs.productId ? "is-invalid" : ""}`}
+                            style={{ width: "100%", maxWidth: "100%", fontSize: "0.85rem", height: 42, textOverflow: "ellipsis" }}
+                            value={it.productId || ""}
+                            onChange={(e) => handleSelectProduct(idx, e.target.value)}
+                            required
+                          >
+                            <option value="">-- Select Product from Catalogue --</option>
+                            {products.map((p) => {
+                              const pStock = Number(p.stock ?? p.currentStock ?? 0);
+                              return (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} [{p.id}] — ₹{Number(p.sellingPrice || p.price || 0).toLocaleString("en-IN")} | Stock: {pStock} {p.unit || 'units'}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          {selectedProd && (
+                            <div style={{ fontSize: 11, marginTop: 4, display: "flex", gap: 6, alignItems: "center" }}>
+                              <span style={{
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                background: isOutOfStock ? "rgba(239, 68, 68, 0.12)" : isStockLow ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                                color: isOutOfStock ? "#ef4444" : isStockLow ? "#d97706" : "#059669"
+                              }}>
+                                {isOutOfStock ? "Out of Stock" : `Stock: ${availableStock} ${selectedProd.unit || 'units'}`}
+                              </span>
+                            </div>
+                          )}
+                          {rowErrs.description && (
+                            <span style={{ fontSize: 10.5, color: "#ef4444", display: "block", marginTop: 2 }}>
+                              {rowErrs.description}
+                            </span>
+                          )}
+                        </div>
+                        {items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            className="icon-btn"
+                            style={{ color: "var(--danger)", padding: 8, borderRadius: 8, background: "rgba(239, 68, 68, 0.08)", marginTop: 20 }}
+                            title="Remove item"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Qty & Rate row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginBottom: 3 }}>
+                            Quantity ({it.unit || "Units"}) <RequiredStar />
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            className={`form-input ${rowErrs.qty ? "is-invalid" : ""}`}
+                            style={{ height: 40, fontSize: "0.85rem", width: "100%" }}
+                            value={it.qty}
+                            onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
+                            required
+                          />
+                          {rowErrs.qty && (
+                            <span style={{ fontSize: 10.5, color: "#ef4444", display: "block", marginTop: 2 }}>
+                              {rowErrs.qty}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginBottom: 3 }}>
+                            Unit Rate (₹) <RequiredStar />
+                          </label>
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className={`form-input ${rowErrs.rate ? "is-invalid" : ""}`}
+                            style={{ height: 40, fontSize: "0.85rem", width: "100%" }}
+                            value={it.rate}
+                            onChange={(e) => handleItemChange(idx, "rate", e.target.value)}
+                            required
+                          />
+                          {rowErrs.rate && (
+                            <span style={{ fontSize: 10.5, color: "#ef4444", display: "block", marginTop: 2 }}>
+                              {rowErrs.rate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* GST & Taxable row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginBottom: 3 }}>
+                            GST Rate
+                          </label>
+                          <select
+                            className="form-select"
+                            style={{ height: 40, fontSize: "0.85rem", width: "100%" }}
+                            value={it.gstRate !== undefined && it.gstRate !== null ? it.gstRate : 0}
+                            onChange={(e) => handleItemChange(idx, "gstRate", e.target.value)}
+                          >
+                            <option value="0">0% GST</option>
+                            <option value="5">5% GST</option>
+                            <option value="12">12% GST</option>
+                            <option value="18">18% GST</option>
+                            <option value="28">28% GST</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginBottom: 3 }}>
+                            Taxable Subtotal
+                          </label>
+                          <div style={{ height: 40, display: "flex", alignItems: "center", padding: "0 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, fontWeight: 700, fontSize: "0.88rem" }}>
+                            ₹{(Number(it.taxable) || 0).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <button

@@ -1,11 +1,11 @@
 import React from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, SlidersHorizontal } from "lucide-react";
 
 /**
  * ResponsiveFilterBar
  * Adapts search, category filters, dropdowns, and counter seamlessly across:
  * - Desktop: horizontal toolbar with inline inputs and filters
- * - Mobile: search bar + horizontally scrolling filter chips + wrap dropdowns
+ * - Mobile: search bar + filter button + horizontally scrolling filter chips + wrap dropdowns
  */
 export default function ResponsiveFilterBar({
   search = "",
@@ -19,30 +19,45 @@ export default function ResponsiveFilterBar({
   countLabel = "records",
   onClearAll = null,
   hasActiveFilters = false,
+  onToggleFilter = null,
+  showFilterBtn = false,
   className = "",
 }) {
   return (
     <div className={`responsive-filter-bar ${className}`}>
-      {/* Search Input */}
+      {/* Search Input Row with optional filter button */}
       {onSearchChange && (
-        <div className="filter-search-box">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="filter-search-input"
-            aria-label={searchPlaceholder}
-          />
-          {search && (
+        <div className="filter-search-row">
+          <div className="filter-search-box">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="filter-search-input"
+              aria-label={searchPlaceholder}
+            />
+            {search && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => onSearchChange("")}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {(showFilterBtn || onToggleFilter) && (
             <button
               type="button"
-              className="search-clear-btn"
-              onClick={() => onSearchChange("")}
-              aria-label="Clear search"
+              className="filter-toggle-icon-btn mobile-only"
+              onClick={onToggleFilter}
+              aria-label="Toggle filters"
             >
-              <X size={14} />
+              <SlidersHorizontal size={17} />
             </button>
           )}
         </div>

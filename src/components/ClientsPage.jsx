@@ -10,6 +10,8 @@ import InvoiceModal from "./InvoiceModal";
 import ExportMenu from "./ExportMenu";
 import MobileRecordCard from "./responsive/MobileRecordCard";
 import ResponsiveDataTable from "./responsive/ResponsiveDataTable";
+import StatusPill from "./responsive/StatusPill";
+import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { erpApi } from "../services/api";
 import { downloadCSV } from "../utils/exportUtils";
 import "./ClientsPage.css";
@@ -275,7 +277,37 @@ export default function ClientsPage({
             )}
           </div>
 
-          <label className="cl-select">
+          {/* Mobile Filter Chips matching Screen 2 */}
+          <div className="mobile-only" style={{ display: "flex", gap: 8, overflowX: "auto", width: "100%", padding: "4px 0", scrollbarWidth: "none" }}>
+            {STATUS_OPTIONS.map(st => {
+              const count = st === "All" ? clients.length : clients.filter(c => c.status === st).length;
+              const isActive = statusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: isActive ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    background: isActive ? "var(--primary)" : "var(--card-bg)",
+                    color: isActive ? "#fff" : "var(--text-main)",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <label className="cl-select desktop-only">
             <span>Status</span>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               {STATUS_OPTIONS.map(st => (
@@ -286,7 +318,7 @@ export default function ClientsPage({
             </select>
           </label>
 
-          <label className="cl-select">
+          <label className="cl-select desktop-only">
             <span>Tier</span>
             <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)}>
               {TIER_OPTIONS.map(t => (
@@ -473,99 +505,32 @@ export default function ClientsPage({
             }
             /* MOBILE RECORD CARDS VIEW */
             mobileView={
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "8px 4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 4px 80px" }}>
                 {filtered.map(c => {
-                  const theme = typeTheme(c.clientType);
-                  const due = Number(c.outstanding) || 0;
                   return (
                     <MobileRecordCard
                       key={c.id}
-                      idBadge={c.id}
-                      title={c.name}
-                      subtitle={getLocation(c)}
-                      categoryBadge={
-                        <span style={{ color: theme.fg }}>
-                          {theme.label}
-                        </span>
-                      }
-                      statusBadge={
-                        <span className={`badge ${c.status === "Active" ? "success" : "muted"}`} style={{ fontSize: 11 }}>
-                          {c.status}
-                        </span>
-                      }
-                      primaryMetrics={[
-                        { label: "Contact", value: c.contact ? <a href={`tel:${c.contact}`} style={{ color: "var(--primary)", textDecoration: "none" }}>{c.contact}</a> : "—" },
-                        { label: "Revenue", value: `₹${Number(c.revenue || 0).toLocaleString("en-IN")}`, isMoney: true },
-                        { label: "Due", value: due > 0 ? `₹${due.toLocaleString("en-IN")}` : "No dues", color: due > 0 ? "var(--danger)" : "var(--success)" },
-                      ]}
-                      expandedDetails={
-                        <div>
-                          {c.contactPerson && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Proprietor</span>
-                              <span className="mobile-record-detail-val">{c.contactPerson}</span>
-                            </div>
-                          )}
-                          {c.email && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Email</span>
-                              <span className="mobile-record-detail-val">{c.email}</span>
-                            </div>
-                          )}
-                          {c.dob && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">DOB</span>
-                              <span className="mobile-record-detail-val">{c.dob}</span>
-                            </div>
-                          )}
-                          {c.gstin && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">GSTIN</span>
-                              <span className="mobile-record-detail-val" style={{ fontFamily: "monospace" }}>{c.gstin}</span>
-                            </div>
-                          )}
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Payment Terms</span>
-                            <span className="mobile-record-detail-val">{c.paymentTerms || "Net 30"}</span>
-                          </div>
-                          <div className="mobile-record-detail-row">
-                            <span className="mobile-record-detail-label">Total Orders</span>
-                            <span className="mobile-record-detail-val">{c.orders || 0}</span>
-                          </div>
-                          {c.productTypes && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Products</span>
-                              <span className="mobile-record-detail-val">{c.productTypes}</span>
-                            </div>
-                          )}
-                          {c.milkQuantity && (
-                            <div className="mobile-record-detail-row">
-                              <span className="mobile-record-detail-label">Milk Volume</span>
-                              <span className="mobile-record-detail-val">{c.milkQuantity}</span>
-                            </div>
-                          )}
+                      avatar={
+                        <div style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: "50%",
+                          background: "rgba(0, 91, 181, 0.1)",
+                          color: "var(--primary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 700,
+                          fontSize: "15px"
+                        }}>
+                          {(c.name || "C")[0].toUpperCase()}
                         </div>
                       }
-                      actions={
-                        <>
-                          <button
-                            type="button"
-                            className="outline"
-                            onClick={() => setViewingClient(c)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-                          >
-                            <Eye size={14} /> Profile
-                          </button>
-                          <button
-                            type="button"
-                            className="primary"
-                            onClick={() => setInvoiceForClient(c)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-                          >
-                            <FileText size={14} /> Invoice
-                          </button>
-                        </>
-                      }
+                      title={c.name}
+                      subtitle={`${c.orders || 0} orders • ₹${Number(c.revenue || 0).toLocaleString("en-IN")}`}
+                      statusBadge={<StatusPill status={c.status || "Active"} />}
+                      showChevron={true}
+                      onClick={() => setViewingClient(c)}
                     />
                   );
                 })}
@@ -574,6 +539,12 @@ export default function ClientsPage({
           />
         )}
       </div>
+
+      {/* Mobile Sticky Primary Action Button matching Screen 2 */}
+      <MobilePrimaryAction
+        label="Add Client"
+        onClick={() => handleOpenAdd(categoryFilter !== "All" ? categoryFilter : "Animal Feed Shop")}
+      />
 
       <ClientModal
         key={editingClient ? editingClient.id : "new-client"}

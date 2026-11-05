@@ -17,8 +17,6 @@ export default function InvoiceViewModal({
   showToast,
   onRefresh
 }) {
-  if (!isOpen || !invoice) return null;
-
   const modalBodyRef = useRef(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [payAmount, setPayAmount] = useState("");
@@ -27,6 +25,15 @@ export default function InvoiceViewModal({
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && invoice) {
+      document.body.classList.add("modal-open");
+      return () => document.body.classList.remove("modal-open");
+    }
+  }, [isOpen, invoice]);
+
+  if (!isOpen || !invoice) return null;
 
   const companyInfo = {
     name: company.name || "Laxmi Enterprises",
@@ -760,7 +767,7 @@ export default function InvoiceViewModal({
 
         {/* ── MODAL FOOTER ── */}
         <div
-          className="modal-footer"
+          className="modal-footer mobile-modal-footer-hierarchical"
           style={{
             padding: "12px 20px",
             background: "var(--card-bg)",

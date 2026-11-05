@@ -66,6 +66,21 @@ export default function Layout({
   };
   const [title, subtitle] = titles[location.pathname] || titles["/"];
 
+  const mobileTitles = {
+    "/": "Home",
+    "/clients": "Clients",
+    "/vendors": "Vendors",
+    "/purchases": "Purchases",
+    "/expo": "Expo Leads",
+    "/invoices": "Sales",
+    "/revenue": "Revenue",
+    "/expenses": "Expenses",
+    "/products": "Products",
+    "/inventory": "Inventory",
+    "/workspace": "Admin Workspace",
+    "/login": "Authentication"
+  };
+
   return (
     <div className="app-shell">
       {/* DESKTOP & TABLET SIDEBAR */}
@@ -91,9 +106,24 @@ export default function Layout({
             <Menu size={20} />
           </button>
 
-          <div className="heading">
+          <div className="heading desktop-only">
             <h1>{title}</h1>
             <p>{subtitle}</p>
+          </div>
+
+          <div className="mobile-topbar-title mobile-only" style={{ flex: 1, minWidth: 0, marginLeft: 8 }}>
+            {location.pathname === "/" ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img src="/logo.png" alt="" style={{ height: 24, width: "auto" }} />
+                <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: "0.5px", color: "var(--primary)" }}>
+                  LAXMI <span style={{ color: "var(--accent)" }}>ENTERPRISES</span>
+                </span>
+              </div>
+            ) : (
+              <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {mobileTitles[location.pathname] || title}
+              </h1>
+            )}
           </div>
 
           <div className="top-actions">
@@ -101,7 +131,7 @@ export default function Layout({
             {onRefreshAll && (
               <button
                 type="button"
-                className="icon-btn"
+                className="icon-btn desktop-only"
                 onClick={handleGlobalRefresh}
                 title="Sync & refresh all data with database"
                 style={{ cursor: "pointer" }}
@@ -115,7 +145,9 @@ export default function Layout({
             )}
 
             {/* Color Palette Switcher */}
-            <ThemeSelector currentTheme={currentTheme} onSelectTheme={onSelectTheme} />
+            <div className="desktop-only">
+              <ThemeSelector currentTheme={currentTheme} onSelectTheme={onSelectTheme} />
+            </div>
 
             {/* Desktop-only Search Box */}
             <div className="search-box">
@@ -149,7 +181,7 @@ export default function Layout({
             {/* Topbar User Avatar Shortcut */}
             <NavLink
               to="/workspace"
-              className="profile-avatar"
+              className="profile-avatar desktop-only"
               style={{ width: 36, height: 36, fontSize: 13, textDecoration: "none", cursor: "pointer" }}
               title={`Logged in as ${currentUser?.name || adminProfile?.name || "Admin"}`}
             >
@@ -164,7 +196,7 @@ export default function Layout({
             {/* Topbar Log Out Button */}
             <button
               type="button"
-              className="icon-btn"
+              className="icon-btn desktop-only"
               onClick={onLogout}
               title="Log Out of Portal"
               style={{ color: "var(--danger)" }}
@@ -181,8 +213,11 @@ export default function Layout({
         </section>
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION DOCK (Visible only on mobile <= 600px) */}
-      <MobileBottomNavigation onOpenMore={() => setMoreMenuOpen(true)} />
+      {/* MOBILE BOTTOM NAVIGATION DOCK (Visible only on mobile < 768px) */}
+      <MobileBottomNavigation
+        onOpenMore={() => setMoreMenuOpen(true)}
+        isMoreOpen={moreMenuOpen}
+      />
 
       {/* MOBILE MORE MENU BOTTOM SHEET */}
       <MobileMoreMenu

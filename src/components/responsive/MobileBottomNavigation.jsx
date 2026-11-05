@@ -1,24 +1,44 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Receipt, Boxes, MoreHorizontal } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard, Users, Receipt, Boxes, Package,
+  Truck, ShoppingCart, IndianRupee, MoreHorizontal
+} from "lucide-react";
 
 /**
  * MobileBottomNavigation
- * Ergonomic fixed bottom navigation dock for smartphones (320px–600px).
- * Five primary tabs:
- * 1. Home
- * 2. Clients
- * 3. Sales
- * 4. Inventory
- * 5. More (opens bottom-sheet navigation menu)
+ * Ergonomic fixed bottom navigation dock for smartphones.
+ * Shows Home, Clients, the active module (Products/Sales/Inventory/Vendors/Purchases/Revenue),
+ * and More. Active tab glows in brand sapphire blue.
  */
-export default function MobileBottomNavigation({ onOpenMore }) {
+export default function MobileBottomNavigation({ onOpenMore, isMoreOpen = false }) {
+  const location = useLocation();
+  const path = location.pathname;
+
+  // Contextual middle tab selection
+  let middleTab = { to: "/products", label: "Products", icon: Package };
+  if (path.startsWith("/vendors")) {
+    middleTab = { to: "/vendors", label: "Vendors", icon: Truck };
+  } else if (path.startsWith("/purchases")) {
+    middleTab = { to: "/purchases", label: "Purchases", icon: ShoppingCart };
+  } else if (path.startsWith("/invoices")) {
+    middleTab = { to: "/invoices", label: "Sales", icon: Receipt };
+  } else if (path.startsWith("/revenue")) {
+    middleTab = { to: "/revenue", label: "Revenue", icon: IndianRupee };
+  } else if (path.startsWith("/inventory")) {
+    middleTab = { to: "/inventory", label: "Inventory", icon: Boxes };
+  } else if (path.startsWith("/products")) {
+    middleTab = { to: "/products", label: "Products", icon: Package };
+  }
+
+  const MiddleIcon = middleTab.icon;
+
   return (
     <nav className="mobile-bottom-nav" aria-label="Mobile Navigation Dock">
       <NavLink
         to="/"
         end
-        className={({ isActive }) => `mobile-bottom-item ${isActive ? "active" : ""}`}
+        className={({ isActive }) => `mobile-bottom-item ${isActive && !isMoreOpen ? "active" : ""}`}
       >
         <LayoutDashboard size={22} className="mobile-nav-icon" />
         <span className="mobile-nav-label">Home</span>
@@ -26,31 +46,23 @@ export default function MobileBottomNavigation({ onOpenMore }) {
 
       <NavLink
         to="/clients"
-        className={({ isActive }) => `mobile-bottom-item ${isActive ? "active" : ""}`}
+        className={({ isActive }) => `mobile-bottom-item ${isActive && !isMoreOpen ? "active" : ""}`}
       >
         <Users size={22} className="mobile-nav-icon" />
         <span className="mobile-nav-label">Clients</span>
       </NavLink>
 
       <NavLink
-        to="/invoices"
-        className={({ isActive }) => `mobile-bottom-item ${isActive ? "active" : ""}`}
+        to={middleTab.to}
+        className={({ isActive }) => `mobile-bottom-item ${isActive && !isMoreOpen ? "active" : ""}`}
       >
-        <Receipt size={22} className="mobile-nav-icon" />
-        <span className="mobile-nav-label">Sales</span>
-      </NavLink>
-
-      <NavLink
-        to="/inventory"
-        className={({ isActive }) => `mobile-bottom-item ${isActive ? "active" : ""}`}
-      >
-        <Boxes size={22} className="mobile-nav-icon" />
-        <span className="mobile-nav-label">Inventory</span>
+        <MiddleIcon size={22} className="mobile-nav-icon" />
+        <span className="mobile-nav-label">{middleTab.label}</span>
       </NavLink>
 
       <button
         type="button"
-        className="mobile-bottom-item"
+        className={`mobile-bottom-item ${isMoreOpen ? "active" : ""}`}
         onClick={onOpenMore}
         aria-label="Open More Modules"
       >
