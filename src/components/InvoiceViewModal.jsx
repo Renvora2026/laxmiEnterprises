@@ -18,6 +18,7 @@ export default function InvoiceViewModal({
   onRefresh
 }) {
   const modalBodyRef = useRef(null);
+  const [mobileTab, setMobileTab] = useState("details"); // "details" | "items"
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payMode, setPayMode] = useState("NEFT");
@@ -162,7 +163,7 @@ export default function InvoiceViewModal({
         style={{ maxWidth: 840, width: "95vw", maxHeight: "92vh", display: "flex", flexDirection: "column" }}
       >
         {/* ── MODAL HEADER ── */}
-        <div className="modal-header" style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div className="modal-header" style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="mini-avatar" style={{ background: "rgba(0, 91, 181, 0.12)", color: "var(--primary)" }}>
               <Receipt size={18} />
@@ -177,73 +178,14 @@ export default function InvoiceViewModal({
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {!isCancelled && balanceDue > 0 && !showPaymentForm && (
-              <button
-                type="button"
-                className="primary"
-                onClick={() => {
-                  if (onRecordPayment) {
-                    onRecordPayment(invoice);
-                  } else {
-                    setPayAmount(balanceDue > 0 ? balanceDue : total);
-                    setShowPaymentForm(true);
-                    setTimeout(() => modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
-                  }
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "#059669",
-                  borderColor: "#059669",
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  cursor: "pointer"
-                }}
-                title="Record payment received for this invoice"
-              >
-                <CreditCard size={14} />
-                <span>Record Payment</span>
-              </button>
-            )}
-
-            {!isCancelled && (
-              <button
-                type="button"
-                className="outline"
-                onClick={() => {
-                  if (onEdit) onEdit(invoice);
-                  onClose();
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  cursor: "pointer"
-                }}
-                title="Edit this invoice"
-              >
-                <Edit3 size={14} />
-                <span>Edit Invoice</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="modal-close-btn"
-              onClick={onClose}
-              aria-label="Close invoice viewer"
-            >
-              <X size={17} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close invoice viewer"
+          >
+            <X size={17} />
+          </button>
         </div>
 
         {/* ── PRINTABLE INVOICE PAPER BODY ── */}
@@ -361,9 +303,11 @@ export default function InvoiceViewModal({
             </div>
           )}
 
-          <div
-            className="invoice-paper"
-            id="printable-invoice"
+          {/* Desktop Printable Paper Preview (Desktop & Tablet >= 768px, also printed via @media print) */}
+          <div className="desktop-only">
+            <div
+              className="invoice-paper"
+              id="printable-invoice"
             style={{
               background: "#ffffff",
               borderRadius: 8,
@@ -765,56 +709,281 @@ export default function InvoiceViewModal({
           </div>
         </div>
 
-        {/* ── MODAL FOOTER ── */}
-        <div
-          className="modal-footer mobile-modal-footer-hierarchical"
-          style={{
-            padding: "12px 20px",
-            background: "var(--card-bg)",
-            borderTop: "1px solid var(--border)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 10
-          }}
-        >
-          {/* Left: cancel button & verified badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12px", color: "var(--text-muted)" }}>
-              <ShieldCheck size={16} color="#10b981" />
-              <span>Verified Tax Invoice</span>
+        {/* ── MOBILE STRUCTURED INVOICE VIEW (Viewport < 768px, matching Screen 10) ── */}
+        <div className="mobile-only" style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+          {/* Top Hero Invoice Card */}
+          <div className="mobile-invoice-card" style={{ padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img
+                  src="/logo.png"
+                  alt="Laxmi Enterprises"
+                  style={{ height: 26, width: "auto" }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, color: "#002b5c", lineHeight: 1.2 }}>
+                    {companyInfo.name}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {isCancelled ? "Cancelled Invoice" : "Tax Invoice"}
+                  </div>
+                </div>
+              </div>
+              <span
+                className={`badge ${statusClass === "paid" ? "paid" : statusClass === "partial" ? "pending-payment" : statusClass === "overdue" ? "overdue" : statusClass === "cancelled" ? "danger" : "muted"}`}
+                style={{ fontSize: 11, padding: "3px 10px", textTransform: "capitalize" }}
+              >
+                {invoice.status || "Paid"}
+              </span>
             </div>
 
-            {!isCancelled && (
-              <button
-                type="button"
-                className="outline"
-                onClick={handleCancelInvoice}
-                disabled={isSubmitting}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  color: "#dc2626",
-                  borderColor: "rgba(220, 38, 38, 0.4)",
-                  padding: "5px 10px",
-                  fontSize: 12
-                }}
-                title="Cancel this invoice and reverse stock"
-              >
-                <Ban size={13} />
-                <span>Cancel Invoice</span>
-              </button>
-            )}
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "var(--primary)", letterSpacing: "-0.01em" }}>
+              {invoice.id || invoice.invoiceNumber}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>
+              <span>Date: <b style={{ color: "var(--text-main)" }}>{invoice.date || invoice.invoiceDate || "—"}</b></span>
+              <span>Due: <b style={{ color: "var(--text-main)" }}>{invoice.dueDate || "—"}</b></span>
+            </div>
           </div>
 
-          {/* Right: Record Payment | Edit Invoice | Download PDF */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            {!isCancelled && balanceDue > 0 && !showPaymentForm && (
+          {/* Underline Tabs: Details | Items */}
+          <div style={{ display: "flex", borderBottom: "2px solid var(--border)", marginBottom: 4 }}>
+            <button
+              type="button"
+              onClick={() => setMobileTab("details")}
+              style={{
+                flex: 1,
+                padding: "9px 0",
+                textAlign: "center",
+                fontWeight: mobileTab === "details" ? 700 : 500,
+                color: mobileTab === "details" ? "var(--primary)" : "var(--text-muted)",
+                borderBottom: mobileTab === "details" ? "3px solid var(--primary)" : "3px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                borderTop: "none",
+                borderLeft: "none",
+                borderRight: "none",
+                fontSize: 13.5,
+                cursor: "pointer"
+              }}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("items")}
+              style={{
+                flex: 1,
+                padding: "9px 0",
+                textAlign: "center",
+                fontWeight: mobileTab === "items" ? 700 : 500,
+                color: mobileTab === "items" ? "var(--primary)" : "var(--text-muted)",
+                borderBottom: mobileTab === "items" ? "3px solid var(--primary)" : "3px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                borderTop: "none",
+                borderLeft: "none",
+                borderRight: "none",
+                fontSize: 13.5,
+                cursor: "pointer"
+              }}
+            >
+              Items ({Array.isArray(invoice.items) ? invoice.items.length : 1})
+            </button>
+          </div>
+
+          {mobileTab === "details" ? (
+            <>
+              {/* Billed To Card */}
+              <div className="mobile-invoice-card">
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                  Billed To
+                </div>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text-main)", marginBottom: 4 }}>
+                  {invoice.clientName || "Customer"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
+                  <div>Acc: <b style={{ color: "var(--text-main)" }}>{invoice.clientId || "—"}</b></div>
+                  <div>GSTIN: <b style={{ color: "var(--text-main)" }}>{client?.gstin || invoice.clientGstin || "—"}</b></div>
+                  {invoice.paymentMode && <div>Payment Mode: <b style={{ color: "var(--text-main)" }}>{invoice.paymentMode}</b></div>}
+                  {client?.phone && <div>Phone: <b style={{ color: "var(--text-main)" }}>{client.phone}</b></div>}
+                  {client?.address && <div>Address: {client.address}</div>}
+                </div>
+              </div>
+
+              {/* Amount & Settlement Summary Card */}
+              <div className="mobile-invoice-card">
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                  Amount & Settlement Summary
+                </div>
+                <div className="mobile-invoice-row">
+                  <span className="mobile-invoice-label">Taxable Amount</span>
+                  <span className="mobile-invoice-value">₹{amount.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="mobile-invoice-row">
+                  <span className="mobile-invoice-label">GST ({effectiveGstRate}%)</span>
+                  <span className="mobile-invoice-value">₹{tax.toLocaleString("en-IN")}</span>
+                </div>
+                {effectiveGstRate > 0 && (
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right", marginTop: -2, marginBottom: 4 }}>
+                    CGST: ₹{cgst.toLocaleString("en-IN")} ({halfRate}%) • SGST: ₹{sgst.toLocaleString("en-IN")} ({halfRate}%)
+                  </div>
+                )}
+                <div className="mobile-invoice-row" style={{ borderTop: "1.5px solid var(--border)", paddingTop: 8, marginTop: 4 }}>
+                  <span style={{ fontWeight: 800, fontSize: 14, color: "var(--text-main)" }}>Total Amount</span>
+                  <span style={{ fontWeight: 800, fontSize: 16, color: "var(--primary)" }}>₹{total.toLocaleString("en-IN")}</span>
+                </div>
+                {paid > 0 && (
+                  <div className="mobile-invoice-row">
+                    <span className="mobile-invoice-label">Amount Paid</span>
+                    <span className="mobile-invoice-value" style={{ color: "var(--success)" }}>₹{paid.toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+                {balanceDue > 0 ? (
+                  <div className="mobile-invoice-row" style={{ background: "rgba(239, 68, 68, 0.06)", padding: "8px 10px", borderRadius: 8, margin: "4px 0" }}>
+                    <span style={{ fontWeight: 700, color: "#dc2626" }}>Balance Due</span>
+                    <span style={{ fontWeight: 800, fontSize: 15, color: "#dc2626" }}>₹{balanceDue.toLocaleString("en-IN")}</span>
+                  </div>
+                ) : (
+                  <div className="mobile-invoice-row" style={{ background: "rgba(16, 185, 129, 0.08)", padding: "6px 10px", borderRadius: 8, margin: "4px 0" }}>
+                    <span style={{ fontWeight: 600, color: "#059669" }}>Settlement Status</span>
+                    <span style={{ fontWeight: 700, color: "#059669" }}>Fully Settled</span>
+                  </div>
+                )}
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", marginTop: 8 }}>
+                  In words: {numberToWordsINR(total)}
+                </div>
+              </div>
+
+              {/* Payment Records Card (if any recorded payments) */}
+              {paymentList.length > 0 && (
+                <div className="mobile-invoice-card">
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                    Payment Records ({paymentList.length})
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {paymentHistoryWithRunningBalance.map((p, idx) => (
+                      <div key={p.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", padding: "8px 10px", borderRadius: 8, fontSize: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
+                            ₹{Number(p.amount || 0).toLocaleString("en-IN")} • <span className="badge success" style={{ fontSize: 10 }}>{p.mode || "Payment"}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                            {p.date} {p.referenceNo ? `• Ref: ${p.referenceNo}` : ""}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePayment(p.id, p.amount)}
+                          disabled={isSubmitting}
+                          title="Delete payment"
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: 4 }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Supplier & Remittance Card */}
+              <div className="mobile-invoice-card">
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                  Supplier & Remittance Info
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
+                  <div><b>{companyInfo.name}</b></div>
+                  <div>GSTIN: <b>{companyInfo.gstin}</b> • PAN: <b>{companyInfo.pan}</b></div>
+                  <div>Bank: <b>SBI</b> • A/C: <b>398201554902</b></div>
+                  <div>IFSC: <b>SBIN0004249</b> (Industrial Estate, Pune)</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Items Tab */
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {Array.isArray(invoice.items) && invoice.items.length > 0 ? (
+                invoice.items.map((it, idx) => {
+                  const itemTaxable = Number(it.taxable) || (Number(it.qty || it.quantity || 1) * Number(it.rate || it.unitPrice || 0));
+                  const itemGst = it.gstRate !== undefined && it.gstRate !== null ? Number(it.gstRate) : effectiveGstRate;
+                  const itemTax = Math.round(itemTaxable * (itemGst / 100));
+                  const itemTotal = Number(it.total || it.lineTotal) || (itemTaxable + itemTax);
+
+                  return (
+                    <div key={idx} className="mobile-invoice-card" style={{ padding: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text-main)" }}>
+                          {it.description || it.name || it.productName || "Commercial Product Item"}
+                        </div>
+                        <span className="badge muted" style={{ fontSize: 10, flexShrink: 0 }}>
+                          #{idx + 1}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginBottom: 8 }}>
+                        HSN: <code>{it.hsn || it.hsnCode || "—"}</code> {it.productId ? `• Code: ${it.productId}` : ""}
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontSize: 12, background: "#f8fafc", padding: "8px 10px", borderRadius: 6, marginBottom: 6 }}>
+                        <div>Qty: <b>{it.qty || it.quantity || 1} {it.unit || it.unitOfMeasure || "Nos"}</b></div>
+                        <div>Rate: <b>₹{Number(it.rate || it.unitPrice || 0).toLocaleString("en-IN")}</b></div>
+                        <div>Taxable: <b>₹{itemTaxable.toLocaleString("en-IN")}</b></div>
+                        <div>GST: <b>{itemGst}% (₹{itemTax.toLocaleString("en-IN")})</b></div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Line Total</span>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: "var(--primary)" }}>₹{itemTotal.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="mobile-invoice-card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text-main)", marginBottom: 4 }}>
+                    {invoice.category || "Commercial Supplies"} Consignment
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
+                    Commercial supply order as per agreed technical specification
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, background: "#f8fafc", padding: "8px 10px", borderRadius: 6 }}>
+                    <span>Quantity: <b>1 Lot</b></span>
+                    <span>Rate: <b>₹{amount.toLocaleString("en-IN")}</b></span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontWeight: 800, color: "var(--primary)" }}>
+                    <span>Total Amount</span>
+                    <span>₹{total.toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── MODAL FOOTER (EXACTLY ONE BUTTON FOR EACH ACTION) ── */}
+      <div className="modal-footer invoice-modal-footer">
+        {/* Primary Action Button */}
+        <button
+          type="button"
+          className="primary invoice-download-btn"
+          onClick={handleDownloadPDF}
+          title="Download PDF"
+        >
+          <Download size={16} />
+          <span>Download PDF</span>
+        </button>
+
+        {/* Secondary Action Row */}
+        {!isCancelled && (
+          <div className="invoice-secondary-actions">
+            {balanceDue > 0 && !showPaymentForm && (
               <button
                 type="button"
-                className="primary"
+                className="primary invoice-pay-btn"
                 onClick={() => {
                   if (onRecordPayment) {
                     onRecordPayment(invoice);
@@ -824,45 +993,39 @@ export default function InvoiceViewModal({
                     setTimeout(() => modalBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
                   }
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "#059669",
-                  borderColor: "#059669"
-                }}
                 title="Record payment received for this invoice"
               >
-                <CreditCard size={15} />
-                <span>Record Payment</span>
+                <CreditCard size={14} />
+                <span>Record Pay</span>
               </button>
             )}
 
             <button
               type="button"
-              className="outline"
+              className="outline invoice-edit-btn"
               onClick={() => {
                 if (onEdit) onEdit(invoice);
                 onClose();
               }}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
               title="Edit this invoice"
             >
               <Edit3 size={14} />
-              <span>Edit Invoice</span>
+              <span>Edit</span>
             </button>
 
             <button
               type="button"
-              className="primary"
-              onClick={handleDownloadPDF}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
+              className="outline invoice-cancel-btn"
+              onClick={handleCancelInvoice}
+              disabled={isSubmitting}
+              title="Cancel this invoice and reverse stock"
             >
-              <Download size={15} />
-              <span>Download PDF</span>
+              <Ban size={13} />
+              <span>Cancel</span>
             </button>
           </div>
-        </div>
+        )}
+      </div>
 
       </div>
     </div>
