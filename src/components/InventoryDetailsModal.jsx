@@ -3,6 +3,7 @@ import {
   Boxes, Warehouse, X, Pencil, ArrowDownRight, ArrowUpRight,
   AlertTriangle, History, IndianRupee, Layers, CheckCircle2
 } from "lucide-react";
+import { formatDate } from "../utils/formatters";
 
 export default function InventoryDetailsModal({
   isOpen,
@@ -29,10 +30,13 @@ export default function InventoryDetailsModal({
   const warehouse = product.warehouseLocation || (product.category === "Dairy" ? "Cold Silo Tank 1" : "Godown Bay A-1");
 
   // Filter recent movements for this product
-  const productMovements = (movements || []).filter(m =>
-    m.productId === productId ||
-    (m.productName && m.productName.toLowerCase() === productName.toLowerCase())
-  ).slice(0, 5);
+  const productMovements = (movements || []).filter(m => {
+    const mPid = String(m.productId || "");
+    const curPid = String(productId || "");
+    const mName = String(m.productName || m.product?.name || "").trim().toLowerCase();
+    const curName = String(productName || "").trim().toLowerCase();
+    return (mPid && curPid && mPid === curPid) || (mName && curName && mName === curName);
+  }).slice(0, 5);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -125,40 +129,71 @@ export default function InventoryDetailsModal({
             </div>
             {productMovements.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-                {productMovements.map((m, idx) => (
-                  <div
-                    key={m.id || idx}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 12px",
-                      background: "var(--table-hover)",
-                      borderRadius: 8,
-                      fontSize: 12.5
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {m.type === "Inward" ? (
-                        <ArrowDownRight size={16} style={{ color: "#10b981" }} />
-                      ) : (
-                        <ArrowUpRight size={16} style={{ color: "#ef4444" }} />
-                      )}
-                      <div>
-                        <b>{m.type || "Movement"}</b>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{m.date || "Recent"} • {m.reference || m.reason || "Manual Adjustment"}</div>
+                {productMovements.map((m, idx) => {
+                  const dirStr = String(m.direction || m.movementType || m.type || "").toUpperCase();
+                  const isInward = dirStr === "IN" ||
+                    dirStr.startsWith("IN") ||
+                    dirStr.includes("INWARD") ||
+                    dirStr.includes("RECEIPT") ||
+                    (m.quantityChange !== undefined && Number(m.quantityChange) > 0);
+
+                  const rawType = m.movementType || m.type;
+                  let typeLabel = "Stock Movement";
+                  if (rawType) {
+                    const norm = String(rawType).toLowerCase();
+                    if (norm === "inward") typeLabel = "Inward Stock";
+                    else if (norm === "outward") typeLabel = "Outward Stock";
+                    else typeLabel = String(rawType).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                  } else {
+                    typeLabel = isInward ? "Inward Stock" : "Outward Stock";
+                  }
+
+                  const dateDisplay = m.movementDate
+                    ? formatDate(m.movementDate)
+                    : (m.date || (m.createdAt ? formatDate(m.createdAt) : "Recent"));
+
+                  const refDisplay = m.referenceId || m.reference || m.reason || m.referenceType || (m.notes ? m.notes.slice(0, 30) : "Manual Adjustment");
+                  const balanceVal = m.stockAfter !== undefined ? m.stockAfter : m.balanceAfter;
+
+                  return (
+                    <div
+                      key={m.id || idx}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        background: "var(--table-hover)",
+                        borderRadius: 8,
+                        fontSize: 12.5
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {isInward ? (
+                          <ArrowDownRight size={16} style={{ color: "#10b981", flexShrink: 0 }} />
+                        ) : (
+                          <ArrowUpRight size={16} style={{ color: "#ef4444", flexShrink: 0 }} />
+                        )}
+                        <div>
+                          <b>{typeLabel}</b>
+                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                            {dateDisplay} • {refDisplay}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <b style={{ color: isInward ? "#10b981" : "#ef4444" }}>
+                          {isInward ? "+" : "−"}{m.quantity} {uom}
+                        </b>
+                        {balanceVal !== undefined && (
+                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                            Balance: {balanceVal} {uom}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <b style={{ color: m.type === "Inward" ? "#10b981" : "#ef4444" }}>
-                        {m.type === "Inward" ? "+" : "-"}{m.quantity} {uom}
-                      </b>
-                      {m.balanceAfter !== undefined && (
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Balance: {m.balanceAfter} {uom}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div style={{ padding: "12px 0", textAlign: "center", color: "var(--text-muted)", fontSize: 12.5 }}>
