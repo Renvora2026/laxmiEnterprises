@@ -58,34 +58,50 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Corporate Architectural Logo Emblem
+              // Corporate Laxmi Enterprises Logo Emblem
               Container(
-                width: 90,
-                height: 90,
+                width: 110,
+                height: 110,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF005BB5), Color(0xFF003870)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(22),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF005BB5).withValues(alpha: 0.4),
-                      blurRadius: 24,
+                      color: const Color(0xFF005BB5).withValues(alpha: 0.35),
+                      blurRadius: 28,
                       offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'L',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 50,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: 'serif',
-                    ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF005BB5), Color(0xFF003870)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'L',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 50,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'serif',
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
