@@ -17,6 +17,7 @@ import StatusPill from "./responsive/StatusPill";
 import MobilePrimaryAction from "./responsive/MobilePrimaryAction";
 import { formatIndianCurrency, formatDate } from "../utils/formatters";
 import { getToday, getFiscalYearFormatted, getFiscalYearOptions } from "../constants/erpConstants";
+import { downloadCSV } from "../utils/exportUtils";
 import "./InvoicesPage.css";
 
 export default function InvoicesPage({
@@ -64,6 +65,39 @@ export default function InvoicesPage({
       setLocalToast(msg);
       setTimeout(() => setLocalToast(null), 3000);
     }
+  };
+
+  const handleExportInvoicesCSV = () => {
+    const headers = [
+      "Invoice Number",
+      "Date",
+      "Due Date",
+      "Client Name",
+      "Category",
+      "Payment Method",
+      "Taxable Total (INR)",
+      "GST Total (INR)",
+      "Grand Total (INR)",
+      "Paid Amount (INR)",
+      "Balance Due (INR)",
+      "Status",
+    ];
+    const rows = filteredInvoices.map((inv) => [
+      `"${inv.invoiceNumber || inv.id || ""}"`,
+      `"${inv.invoiceDate || inv.date || ""}"`,
+      `"${inv.dueDate || ""}"`,
+      `"${(inv.clientName || "").replace(/"/g, '""')}"`,
+      `"${(inv.category || "").replace(/"/g, '""')}"`,
+      `"${(inv.paymentMethod || inv.paymentMode || "").replace(/"/g, '""')}"`,
+      Number(inv.taxableTotal ?? inv.amount ?? 0),
+      Number(inv.gstTotal ?? inv.tax ?? 0),
+      Number(inv.grandTotal ?? inv.total ?? 0),
+      Number(inv.paidAmount ?? 0),
+      Number(inv.balanceDue ?? 0),
+      `"${inv.status || "Paid"}"`,
+    ]);
+    downloadCSV(`Invoices_${selectedFY.replace(/\s+/g, "_")}.csv`, headers, rows);
+    notify(`✓ Exported ${filteredInvoices.length} invoices to CSV`);
   };
 
   const getInvoiceFY = (inv) => {
@@ -236,6 +270,15 @@ export default function InvoicesPage({
               {isRefreshing ? "Syncing..." : "Sync"}
             </button>
           )}
+
+          <button
+            type="button"
+            className="outline"
+            onClick={handleExportInvoicesCSV}
+            title="Export filtered invoices to CSV"
+          >
+            <Download size={15} /> Export CSV
+          </button>
 
           <button
             type="button"

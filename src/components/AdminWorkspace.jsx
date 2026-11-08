@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   Building2, UserCheck, ShieldCheck, Save, Mail, Phone, MapPin,
   Plus, CheckCircle2, Lock, Key, RefreshCw, AlertTriangle, Eye, EyeOff,
-  Target, IndianRupee
+  Target, IndianRupee, FileText, Download
 } from "lucide-react";
+import FinancialReportModal from "./FinancialReportModal";
 import { formatIndianCurrency, formatPercent } from "../utils/formatters";
 import {
   validateRequiredText,
@@ -24,10 +25,14 @@ export default function AdminWorkspace({
   setCompany, 
   systemPrefs = {}, 
   setSystemPrefs,
-  onOpenCredsModal
+  onOpenCredsModal,
+  invoices = [],
+  purchases = [],
+  expenses = [],
 }) {
   const [activeTab, setActiveTab] = useState("company");
   const [toast, setToast] = useState(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Team members list directly from MySQL
   const [teamMembers, setTeamMembers] = useState([]);
@@ -85,8 +90,33 @@ export default function AdminWorkspace({
 
   // Sync if parent state changes
   useEffect(() => {
-    if (company && Object.keys(company).length > 0) setCompForm(company);
+    if (company && Object.keys(company).length > 0) {
+      setCompForm(prev => ({
+        ...prev,
+        ...company,
+        gstin: company.gstin === "27AAACL1234F1Z5" ? "" : (company.gstin ?? prev.gstin ?? ""),
+        pan: company.pan === "AAACL1234F" ? "" : (company.pan ?? prev.pan ?? ""),
+      }));
+    }
   }, [company]);
+
+  // Load live company profile from MySQL database on mount
+  useEffect(() => {
+    erpApi.getCompany()
+      .then((res) => {
+        if (res?.data && res.data.name) {
+          const clean = { ...res.data };
+          if (clean.gstin === "27AAACL1234F1Z5") clean.gstin = "";
+          if (clean.pan === "AAACL1234F") clean.pan = "";
+          setCompForm(clean);
+          if (setCompany) setCompany(clean);
+          localStorage.setItem("le_company", JSON.stringify(clean));
+        }
+      })
+      .catch((e) => {
+        console.warn("Could not load company from MySQL:", e.message);
+      });
+  }, []);
 
   useEffect(() => {
     if (adminProfile && Object.keys(adminProfile).length > 0) setProfForm(adminProfile);
@@ -124,18 +154,38 @@ export default function AdminWorkspace({
   const loadTargets = async (fy) => {
     setIsLoadingTargets(true);
     try {
+      const cleanFy = (fy || "").replace(/^FY\s*/i, "").trim();
       const [tgtRes, qRes] = await Promise.allSettled([
-        erpApi.getTargets({ fiscalYear: fy }),
-        erpApi.getQuarterlyBreakdown({ fiscalYear: fy })
+        erpApi.getTargets({ fiscalYear: cleanFy }),
+        erpApi.getQuarterlyBreakdown({ fiscalYear: cleanFy })
       ]);
+
+      const quarters = ["Q1", "Q2", "Q3", "Q4"];
+
       if (tgtRes.status === "fulfilled" && tgtRes.value?.data) {
         const raw = Array.isArray(tgtRes.value.data) ? tgtRes.value.data : [];
-        if (raw.length > 0) {
-          setTargetsList(raw);
-        }
+        const fullList = quarters.map((q) => {
+          const found = raw.find((r) => r.quarter === q);
+          return {
+            quarter: q,
+            targetAmount: found ? Number(found.targetAmount || 0) : 0,
+            notes: found?.notes || `${q} Target for ${cleanFy}`,
+            fiscalYear: cleanFy
+          };
+        });
+        setTargetsList(fullList);
+      } else {
+        setTargetsList(quarters.map(q => ({ quarter: q, targetAmount: 0, notes: "", fiscalYear: cleanFy })));
       }
+
       if (qRes.status === "fulfilled" && qRes.value?.data) {
-        setQuarterlyProgress(Array.isArray(qRes.value.data) ? qRes.value.data : []);
+        const qData = qRes.value.data;
+        const qArray = Array.isArray(qData)
+          ? qData
+          : Array.isArray(qData?.quarters)
+          ? qData.quarters
+          : [];
+        setQuarterlyProgress(qArray);
       }
     } catch (e) {
       console.warn("Could not load targets:", e.message);
@@ -151,15 +201,20 @@ export default function AdminWorkspace({
   const handleSaveTargets = async (e) => {
     e.preventDefault();
     setIsSavingTargets(true);
+    const cleanFy = (targetFy || "").replace(/^FY\s*/i, "").trim();
     try {
-      const payload = targetsList.map(t => ({
-        fiscalYear: targetFy,
-        quarter: t.quarter,
-        targetAmount: Number(t.targetAmount) || 0,
-        notes: t.notes || ""
-      }));
+      const quarters = ["Q1", "Q2", "Q3", "Q4"];
+      const payload = quarters.map((qKey) => {
+        const t = targetsList.find((item) => item.quarter === qKey);
+        return {
+          fiscalYear: cleanFy,
+          quarter: qKey,
+          targetAmount: Number(t?.targetAmount || 0),
+          notes: t?.notes || `${qKey} Target for ${cleanFy}`
+        };
+      });
       await erpApi.saveBulkTargets(payload);
-      showNotification(`✓ Sales targets for ${targetFy} saved directly in MySQL!`);
+      showNotification(`✓ Sales targets for FY ${cleanFy} saved directly in MySQL!`);
       await loadTargets(targetFy);
     } catch (err) {
       showNotification(`⚠️ Could not save targets: ${err.message}`);
@@ -378,6 +433,15 @@ export default function AdminWorkspace({
           </p>
         </div>
         <div className="admin-banner-meta">
+          <button
+            type="button"
+            className="primary"
+            onClick={() => setIsReportModalOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", fontWeight: 700, fontSize: "12.5px", cursor: "pointer" }}
+            title="Download Monthly, Quarterly, or Annual Financial Statement PDF"
+          >
+            <FileText size={15} /> Financial Reports (PDF)
+          </button>
           <span className="badge brand">Status: Operational (v2026.1)</span>
           <span className="badge success">Role: {adminProfile.role || "Admin"}</span>
           <span className="badge" style={{ background: dbStatus === "MySQL Connected" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)", color: dbStatus === "MySQL Connected" ? "#10b981" : "var(--danger)", border: dbStatus === "MySQL Connected" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)", fontWeight: 600 }}>
@@ -536,7 +600,7 @@ export default function AdminWorkspace({
               <label>Bank Name</label>
               <input 
                 className="form-input" 
-                placeholder="e.g. Bank of India / State Bank of India"
+                placeholder="Bank Name (e.g. State Bank of India)"
                 value={compForm.bankName || ""} 
                 onChange={(e) => setCompForm({ ...compForm, bankName: e.target.value })} 
               />
@@ -546,7 +610,7 @@ export default function AdminWorkspace({
               <label>Branch Name & City</label>
               <input 
                 className="form-input" 
-                placeholder="e.g. Shendra Industrial Estate Branch, Chh. Sambhajinagar"
+                placeholder="Branch Name & City"
                 value={compForm.bankBranch || ""} 
                 onChange={(e) => setCompForm({ ...compForm, bankBranch: e.target.value })} 
               />
@@ -556,7 +620,7 @@ export default function AdminWorkspace({
               <label>Bank Account Number</label>
               <input 
                 className="form-input" 
-                placeholder="e.g. 068510110008573"
+                placeholder="Enter Bank Account Number"
                 value={compForm.accountNumber || ""} 
                 onChange={(e) => setCompForm({ ...compForm, accountNumber: e.target.value })} 
               />
@@ -566,7 +630,7 @@ export default function AdminWorkspace({
               <label>IFSC Code</label>
               <input 
                 className="form-input uppercase" 
-                placeholder="e.g. BKID0000685"
+                placeholder="11-character IFSC Code"
                 maxLength={11}
                 value={compForm.ifscCode || ""} 
                 onChange={(e) => setCompForm({ ...compForm, ifscCode: e.target.value.toUpperCase() })} 
@@ -577,7 +641,7 @@ export default function AdminWorkspace({
               <label>Account Beneficiary Name</label>
               <input 
                 className="form-input" 
-                placeholder="e.g. Laxmi Enterprises / Renuka Krushna Shinde"
+                placeholder="Account Beneficiary Name"
                 value={compForm.accountName || ""} 
                 onChange={(e) => setCompForm({ ...compForm, accountName: e.target.value })} 
               />
@@ -961,15 +1025,18 @@ export default function AdminWorkspace({
                         min="0"
                         step="1000"
                         className="form-input"
-                        value={tgt.targetAmount}
+                        value={tgt.targetAmount !== undefined && tgt.targetAmount !== null ? tgt.targetAmount : 0}
                         onChange={(e) => {
-                          const val = Number(e.target.value) || 0;
+                          const val = e.target.value === "" ? 0 : Number(e.target.value);
                           setTargetsList(prev => {
-                            const exists = prev.some(t => t.quarter === qKey);
-                            if (exists) {
-                              return prev.map(t => t.quarter === qKey ? { ...t, targetAmount: val } : t);
-                            }
-                            return [...prev, { quarter: qKey, targetAmount: val, notes: "" }];
+                            const quarters = ["Q1", "Q2", "Q3", "Q4"];
+                            return quarters.map(q => {
+                              const existing = prev.find(t => t.quarter === q) || { quarter: q, targetAmount: 0, notes: "" };
+                              if (q === qKey) {
+                                return { ...existing, targetAmount: val };
+                              }
+                              return existing;
+                            });
                           });
                         }}
                       />
@@ -981,18 +1048,18 @@ export default function AdminWorkspace({
                     <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 4, marginTop: 10, paddingTop: 10, borderTop: "1px dashed var(--border)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "var(--text-muted)" }}>Actual Invoiced:</span>
-                        <strong style={{ color: "var(--text-main)" }}>{formatIndianCurrency(prog.actualRevenue || 0)}</strong>
+                        <strong style={{ color: "var(--text-main)" }}>{formatIndianCurrency(prog.actualRevenue ?? prog.turnover ?? 0)}</strong>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "var(--text-muted)" }}>Gross Margin:</span>
-                        <span style={{ color: (prog.grossMarginPct ?? prog.netMargin) !== null ? "#10b981" : "var(--text-muted)", fontWeight: 600 }}>
+                        <span style={{ color: (prog.grossMarginPct ?? prog.netMargin) !== null && (prog.grossMarginPct ?? prog.netMargin) !== undefined ? "#10b981" : "var(--text-muted)", fontWeight: 600 }}>
                           {(prog.grossMarginPct ?? prog.netMargin) !== null && (prog.grossMarginPct ?? prog.netMargin) !== undefined ? formatPercent(prog.grossMarginPct ?? prog.netMargin) : "—"}
                         </span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "var(--text-muted)" }}>Progress:</span>
                         <strong style={{ color: "var(--text-main)" }}>
-                          {prog.progressPercent !== null && prog.progressPercent !== undefined ? `${prog.progressPercent}%` : "0%"}
+                          {prog.progressPercent !== null && prog.progressPercent !== undefined ? `${prog.progressPercent}%` : (prog.achievedPct !== null && prog.achievedPct !== undefined ? `${prog.achievedPct}%` : "0%")}
                         </strong>
                       </div>
                     </div>
@@ -1001,7 +1068,7 @@ export default function AdminWorkspace({
                       <div
                         style={{
                           height: "100%",
-                          width: `${Math.min(100, Math.max(0, prog.progressPercent || 0))}%`,
+                          width: `${Math.min(100, Math.max(0, prog.progressPercent ?? prog.achievedPct ?? 0))}%`,
                           background: prog.status === "Achieved" ? "#10b981" : "var(--primary)",
                           borderRadius: 3,
                           transition: "width 0.3s ease"
@@ -1108,6 +1175,16 @@ export default function AdminWorkspace({
           </div>
         </div>
       )}
+      {/* FINANCIAL REPORT MODAL (Monthly, Quarterly, Yearly PDF) */}
+      <FinancialReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        invoices={invoices}
+        purchases={purchases}
+        expenses={expenses}
+        company={company}
+        showToast={showNotification}
+      />
     </div>
   );
 }

@@ -355,13 +355,16 @@ export default function PurchaseViewModal({
               <h4 style={{ margin: "4px 0", fontSize: "1.05rem", color: "var(--primary)" }}>
                 {company.name || "Laxmi Enterprises"}
               </h4>
-              <p style={{ margin: "2px 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                {company.tagline || "Agribusiness & Industrial Supplies"}
-              </p>
+              {company.tagline && (
+                <p style={{ margin: "2px 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                  {company.tagline}
+                </p>
+              )}
               <div style={{ fontSize: "0.8rem", marginTop: 6, lineHeight: 1.4 }}>
-                <div>GSTIN: <b>{company.gstin || "27AAACL1234F1Z5"}</b></div>
-                <div>{company.address || "Pune, Maharashtra, India"}</div>
-                <div>Phone: {company.phone || "+91 98765 43210"}</div>
+                {company.gstin && <div>GSTIN: <b>{company.gstin}</b></div>}
+                {company.address && <div>{company.address}</div>}
+                {company.phone && <div>Phone: {company.phone}</div>}
+                {company.email && <div>Email: {company.email}</div>}
               </div>
             </div>
 

@@ -10,12 +10,14 @@ import {
 } from "recharts";
 import InvoiceModal from "./InvoiceModal";
 import InvoiceViewModal from "./InvoiceViewModal";
+import FinancialReportModal from "./FinancialReportModal";
 import { StatCard } from "./Dashboard";
 import ResponsiveKpiGrid from "./responsive/ResponsiveKpiGrid";
 import ResponsiveChartContainer from "./responsive/ResponsiveChartContainer";
 import { formatIndianCurrency, formatPercent } from "../utils/formatters";
 import { erpApi } from "../services/api";
 import { getToday, getFiscalYear, getFiscalYearOptions } from "../constants/erpConstants";
+import { downloadCSV } from "../utils/exportUtils";
 
 const CATEGORY_COLORS = {
   "Animal Feed": "var(--primary)",
@@ -25,6 +27,8 @@ const CATEGORY_COLORS = {
 export default function Revenue({
   clients = [],
   invoices = [],
+  purchases = [],
+  expenses = [],
   onCreateInvoice,
   products = [],
   company = {},
@@ -39,6 +43,7 @@ export default function Revenue({
   const [cashFlowData, setCashFlowData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg) => {
@@ -90,6 +95,76 @@ export default function Revenue({
 
   const isCashFlowEmpty = cashFlowData.length === 0 || cashFlowData.every(m => (m.turnover || 0) === 0);
 
+  const handleExportRevenueReport = () => {
+    const headers = [
+      "Report Level",
+      "Period / Label",
+      "Sales Target (INR)",
+      "Taxable Turnover (INR)",
+      "Gross Invoiced (INR)",
+      "GST Collected (INR)",
+      "Expenses (INR)",
+      "Gross Profit (INR)",
+      "Net Profit (INR)",
+      "Achievement / Margin %",
+      "Status",
+    ];
+
+    const rows = [];
+
+    // 1. Annual Fiscal Row
+    rows.push([
+      `"ANNUAL FISCAL YEAR"`,
+      `"FY ${selectedFY}"`,
+      Number(summaryData?.fiscalTarget || quarterlyData.reduce((s, q) => s + Number(q.targetAmount || 0), 0)),
+      Number(summaryData?.taxableRevenue || 0),
+      Number(summaryData?.grossInvoiced || 0),
+      Number(summaryData?.gstCollected || 0),
+      Number(summaryData?.totalExpenses || 0),
+      Number(summaryData?.grossProfit || 0),
+      Number(summaryData?.profitAfterExpense || 0),
+      `"${summaryData?.netMarginPct !== null && summaryData?.netMarginPct !== undefined ? summaryData.netMarginPct + "% Net Margin" : ""}"`,
+      `"Active"`
+    ]);
+
+    // 2. Quarterly Breakdown Rows (Q1, Q2, Q3, Q4)
+    quarterlyData.forEach((q) => {
+      rows.push([
+        `"QUARTERLY BREAKDOWN"`,
+        `"${q.quarter} (${q.label})"`,
+        Number(q.targetAmount || 0),
+        Number(q.turnover || 0),
+        `"-"`,
+        `"-"`,
+        `"-"`,
+        Number(q.margin || 0),
+        `"-"`,
+        `"${q.achievedPct !== null ? q.achievedPct + "%" : "0%"}"`,
+        `"${q.status || "Tracking"}"`,
+      ]);
+    });
+
+    // 3. Monthly Ledger Rows (Apr to Mar)
+    cashFlowData.forEach((m) => {
+      rows.push([
+        `"MONTHLY LEDGER"`,
+        `"${m.monthName || m.month}"`,
+        `"-"`,
+        Number(m.turnover || 0),
+        Number(m.grossInvoiced || 0),
+        Number(m.gstCollected || 0),
+        Number(m.expenses || 0),
+        Number(m.grossProfit || 0),
+        Number(m.profitAfterExpense || 0),
+        `"${m.netMarginPct !== null && m.netMarginPct !== undefined ? m.netMarginPct + "% Net" : ""}"`,
+        `"${Number(m.turnover || 0) > 0 ? "Recorded" : "Nil"}"`,
+      ]);
+    });
+
+    downloadCSV(`Revenue_Report_FY_${selectedFY.replace(/\s+/g, "_")}.csv`, headers, rows);
+    showToast(`✓ Exported FY ${selectedFY} Revenue Report (Annual, Quarterly & Monthly)`);
+  };
+
   return (
     <div className="page">
       {toast && (
@@ -110,18 +185,24 @@ export default function Revenue({
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
-          <select
-            value={selectedFY}
-            onChange={(e) => setSelectedFY(e.target.value)}
-            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", fontWeight: 600, fontSize: "13px" }}
-          >
-            {fyOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginLeft: "auto" }}>
+          {/* Fiscal Year Selector */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "1 1 auto" }}>
+            <Calendar size={15} style={{ color: "var(--text-muted)" }} />
+            <select
+              className="form-input"
+              value={selectedFY}
+              onChange={(e) => setSelectedFY(e.target.value)}
+              style={{ width: "auto", minWidth: "150px", padding: "6px 12px", fontSize: "13px", fontWeight: 600 }}
+              title="Select Financial Year"
+            >
+              {fyOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button 
             type="button"
@@ -130,7 +211,27 @@ export default function Revenue({
             title="Sync and refresh live invoices"
             style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            <RotateCcw size={14} className={loading ? "spin" : ""} /> Sync Live Ledger
+            <RotateCcw size={14} className={loading ? "spin" : ""} /> Sync
+          </button>
+
+          <button
+            type="button"
+            className="outline"
+            onClick={handleExportRevenueReport}
+            title="Export Monthly, Quarterly and Yearly Revenue Report to CSV"
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Download size={14} /> Export CSV
+          </button>
+
+          <button
+            type="button"
+            className="primary"
+            onClick={() => setIsReportModalOpen(true)}
+            title="Download Monthly, Quarterly, or Annual Financial Statement PDF"
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <FileText size={14} /> Download PDF Report
           </button>
 
         </div>
@@ -408,6 +509,16 @@ export default function Revenue({
         }}
         clients={clients}
         products={products}
+        company={company}
+        showToast={showToast}
+      />
+      {/* FINANCIAL REPORT MODAL (Monthly, Quarterly, Yearly PDF) */}
+      <FinancialReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        invoices={invoices}
+        purchases={purchases}
+        expenses={expenses}
         company={company}
         showToast={showToast}
       />

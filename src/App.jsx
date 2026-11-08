@@ -162,11 +162,14 @@ export default function App() {
         localStorage.setItem("le_expenses", JSON.stringify(data.expenses));
       }
       if (data.company && data.company.name) {
-        setCompany(data.company);
-        localStorage.setItem("le_company", JSON.stringify(data.company));
+        const cleanComp = { ...data.company };
+        if (cleanComp.gstin === "27AAACL1234F1Z5") cleanComp.gstin = "";
+        if (cleanComp.pan === "AAACL1234F") cleanComp.pan = "";
+        setCompany(cleanComp);
+        localStorage.setItem("le_company", JSON.stringify(cleanComp));
       }
     } catch (e) {
-      console.warn("Failed to sync live data from MySQL:", e.message);
+      console.warn("Failed to sync live data", e.message);
     }
   };
   const refreshStockData = fetchMasterDataFromDB;
@@ -327,15 +330,30 @@ export default function App() {
   const [company, setCompany] = useState(() => {
     const saved = localStorage.getItem("le_company");
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          if (parsed.gstin === "27AAACL1234F1Z5") parsed.gstin = "";
+          if (parsed.pan === "AAACL1234F") parsed.pan = "";
+          return parsed;
+        }
+      } catch (e) {}
     }
     return {
       name: "Laxmi Enterprises",
+      tagline: "Industrial Supplies, Hardware, Agro Supplies & Trading Portal",
       email: "laxmigroup616@gmail.com",
       phone: "+91 99210 63187",
       address: "Zalta, Zalta fata Main Road , Chikalthana, Chh. Shambhajnagar - 431007, Maharashtra, India",
+      gstin: "",
+      pan: "",
       currency: "INR (₹)",
-      financialYear: getFiscalYearFormatted(getToday())
+      financialYear: getFiscalYearFormatted(getToday()),
+      bankName: "",
+      bankBranch: "",
+      accountNumber: "",
+      ifscCode: "",
+      accountName: ""
     };
   });
 
@@ -674,6 +692,8 @@ export default function App() {
               <RevenuePage 
                 clients={clients} 
                 invoices={invoices}
+                purchases={purchases}
+                expenses={expenses}
                 collections={collections}
                 onCreateInvoice={handleCreateInvoiceCascade}
                 products={products}
@@ -725,6 +745,9 @@ export default function App() {
                 setCompany={setCompany}
                 systemPrefs={systemPrefs}
                 setSystemPrefs={setSystemPrefs}
+                invoices={invoices}
+                purchases={purchases}
+                expenses={expenses}
               />
             } 
           />

@@ -1287,16 +1287,43 @@
     font-size: 12px !important;
   }
 
-  .page-actions:not(.mobile-visible) {
-    display: none !important;
+  /* Page Actions Bar (Always Fully Accessible on Mobile & Desktop) */
+  .page-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
   }
 
-  .page-actions.mobile-visible {
+  .page-actions > div {
     display: flex !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    gap: 10px !important;
-    margin-bottom: 12px !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .page-actions select,
+  .page-actions .form-input {
+    flex: 1 1 auto !important;
+    min-height: 40px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .page-actions button,
+  .page-actions .primary,
+  .page-actions .outline {
+    flex: 1 1 auto !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
   }
 }
 

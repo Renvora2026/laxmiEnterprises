@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { LAXMI_LOGO_BASE64 } from "../assets/logoBase64";
+import { LAXMI_LOGO_BASE64 } from "../assets/logoBase64.js";
 
 /**
  * Convert integer amount to Indian currency words format (Rupees)
@@ -74,21 +74,21 @@ export function generateInvoicePDF(invoice, company = {}, clientExtra = {}) {
   const margin = 14;
   const contentWidth = pageWidth - margin * 2; // 182mm
 
-  // Default company info
+  // Dynamic company info strictly from database
   const companyInfo = {
-    name: company.name || "LAXMI ENTERPRISES",
-    tagline: company.tagline || "Agribusiness, Cattle Feed & Industrial Supplies",
-    gstin: company.gstin || "27AAACL1234F1Z5",
-    pan: company.pan || "AAACL1234F",
-    phone: company.phone || "+91 99210 63187",
-    email: company.email || "laxmigroup616@gmail.com",
-    address: company.address || "Zalta, Zalta fata Main Road , Chikalthana, Chh. Shambhajnagar - 431007, Maharashtra, India",
-    state: "Maharashtra (Code: 27)",
-    bankName: "Bank of India",
-    bankBranch: "Shendra Industrial Estate Branch, Chh. Sambhajinagar",
-    accountNumber: "068510110008573",
-    ifscCode: "BKID0000685",
-    accountName: "Renuka Krushna Shinde"
+    name: company.name || "Laxmi Enterprises",
+    tagline: company.tagline || "",
+    gstin: company.gstin || "",
+    pan: company.pan || "",
+    phone: company.phone || "",
+    email: company.email || "",
+    address: company.address || "",
+    state: company.state || "Maharashtra (Code: 27)",
+    bankName: company.bankName || "",
+    bankBranch: company.bankBranch || "",
+    accountNumber: company.accountNumber || "",
+    ifscCode: company.ifscCode || "",
+    accountName: company.accountName || ""
   };
 
   const invoiceAmount = Number(invoice.amount || invoice.subtotal || invoice.taxableTotal) || 0;
@@ -461,10 +461,16 @@ export function generateInvoicePDF(invoice, company = {}, clientExtra = {}) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);
-  doc.text(`Bank Name: ${companyInfo.bankName}`, margin + 3.5, leftY + 10);
-  doc.text(`Account Name: ${companyInfo.accountName}`, margin + 3.5, leftY + 14);
-  doc.text(`Account Number: ${companyInfo.accountNumber}`, margin + 3.5, leftY + 18);
-  doc.text(`IFSC Code: ${companyInfo.ifscCode}  |  Branch: ${companyInfo.bankBranch}`, margin + 3.5, leftY + 22);
+  if (companyInfo.bankName || companyInfo.accountNumber) {
+    doc.text(`Bank Name: ${companyInfo.bankName || "—"}`, margin + 3.5, leftY + 10);
+    doc.text(`Account Name: ${companyInfo.accountName || companyInfo.name || "—"}`, margin + 3.5, leftY + 14);
+    doc.text(`Account Number: ${companyInfo.accountNumber || "—"}`, margin + 3.5, leftY + 18);
+    doc.text(`IFSC Code: ${companyInfo.ifscCode || "—"}  |  Branch: ${companyInfo.bankBranch || "—"}`, margin + 3.5, leftY + 22);
+  } else {
+    doc.text("Payment Mode: Commercial NEFT / RTGS / UPI", margin + 3.5, leftY + 10);
+    doc.text(`Beneficiary: ${companyInfo.name || "Laxmi Enterprises"}`, margin + 3.5, leftY + 14);
+    doc.text("Bank remittance details available on invoice voucher.", margin + 3.5, leftY + 18);
+  }
 
   // 7. TERMS & CONDITIONS AND AUTHORIZED SIGNATORY
   const bottomY = Math.max(summaryBoxY + 39, leftY + 31) + 4;
@@ -479,7 +485,7 @@ export function generateInvoicePDF(invoice, company = {}, clientExtra = {}) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.8);
   doc.setTextColor(100, 116, 139);
-  doc.text("1. All disputes are subject to Pune, Maharashtra jurisdiction only.", margin, bottomY + 8);
+  doc.text("1. All disputes are subject to local jurisdiction only.", margin, bottomY + 8);
   doc.text("2. Payment is due within standard agreed credit period. Interest @ 18% p.a. chargeable on overdue accounts.", margin, bottomY + 11.5);
   doc.text("3. Goods once received and inspected cannot be returned without written authorization from Laxmi Enterprises.", margin, bottomY + 15);
   doc.text("4. Input Tax Credit (ITC) applicable as per GST Section 16 of CGST Act, 2017.", margin, bottomY + 18.5);
@@ -575,21 +581,21 @@ export function generatePurchaseInvoicePDF(purchase = {}, company = {}) {
   const margin = 14;
   const contentWidth = pageWidth - margin * 2; // 182mm
 
-  // Default company info
+  // Dynamic company info strictly from database
   const companyInfo = {
-    name: company.name || "LAXMI ENTERPRISES",
-    tagline: company.tagline || "Agribusiness, Cattle Feed & Industrial Supplies",
-    gstin: company.gstin || "27AAACL1234F1Z5",
-    pan: company.pan || "AAACL1234F",
-    phone: company.phone || "+91 98765 43210",
-    email: company.email || "contact@laxmienterprises.com",
-    address: company.address || "Shop No. 12, Commercial Complex, Near Industrial Estate, Pune - 411038, Maharashtra, India",
-    state: "Maharashtra (Code: 27)",
-    bankName: "State Bank of India (SBI)",
-    bankBranch: "Pune Industrial Estate Branch",
-    accountNumber: "398201554902",
-    ifscCode: "SBIN0001245",
-    accountName: "Laxmi Enterprises Commercial"
+    name: company.name || "Laxmi Enterprises",
+    tagline: company.tagline || "",
+    gstin: company.gstin || "",
+    pan: company.pan || "",
+    phone: company.phone || "",
+    email: company.email || "",
+    address: company.address || "",
+    state: company.state || "Maharashtra (Code: 27)",
+    bankName: company.bankName || "",
+    bankBranch: company.bankBranch || "",
+    accountNumber: company.accountNumber || "",
+    ifscCode: company.ifscCode || "",
+    accountName: company.accountName || ""
   };
 
   const isFeed = purchase.category === "Animal Feed Shop";
@@ -754,7 +760,7 @@ export function generatePurchaseInvoicePDF(purchase = {}, company = {}) {
   doc.setTextColor(71, 85, 105);
   doc.text(`GSTIN: ${companyInfo.gstin} | PAN: ${companyInfo.pan}`, margin + 4, currentY + 16);
   doc.text(`Phone: ${companyInfo.phone}`, margin + 4, currentY + 20);
-  doc.text(`Delivery Location: Pune, Maharashtra (27)`, margin + 4, currentY + 24);
+  doc.text(`Delivery Location: Maharashtra (27)`, margin + 4, currentY + 24);
   doc.text(`Warehouse/Bay: ${purchase.remarks || "Central Silo Receiving Bay"}`, margin + 4, currentY + 28, { maxWidth: colW - 8 });
 
   // Box 2: Supplier Entity (Seller / Vendor)
@@ -990,10 +996,16 @@ export function generatePurchaseInvoicePDF(purchase = {}, company = {}) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(51, 65, 85);
-  doc.text(`Bank Name: ${companyInfo.bankName}`, margin + 3.5, currentY + 9);
-  doc.text(`Account Name: ${companyInfo.accountName}`, margin + 3.5, currentY + 13);
-  doc.text(`Account No: ${companyInfo.accountNumber}  |  IFSC: ${companyInfo.ifscCode}`, margin + 3.5, currentY + 17);
-  doc.text(`Branch: ${companyInfo.bankBranch}`, margin + 3.5, currentY + 21);
+  if (companyInfo.bankName || companyInfo.accountNumber) {
+    doc.text(`Bank Name: ${companyInfo.bankName || "—"}`, margin + 3.5, currentY + 9);
+    doc.text(`Account Name: ${companyInfo.accountName || companyInfo.name || "—"}`, margin + 3.5, currentY + 13);
+    doc.text(`Account No: ${companyInfo.accountNumber || "—"}  |  IFSC: ${companyInfo.ifscCode || "—"}`, margin + 3.5, currentY + 17);
+    doc.text(`Branch: ${companyInfo.bankBranch || "—"}`, margin + 3.5, currentY + 21);
+  } else {
+    doc.text("Payment Mode: Commercial RTGS / NEFT Remittance", margin + 3.5, currentY + 9);
+    doc.text(`Beneficiary: ${companyInfo.name || "Laxmi Enterprises"}`, margin + 3.5, currentY + 13);
+    doc.text("Remittance details as per agreed vendor contract.", margin + 3.5, currentY + 17);
+  }
 
   // Authorized Signatory Block (Right)
   const signX = margin + bottomW + 6;
@@ -1063,4 +1075,691 @@ export function generatePurchaseInvoicePDF(purchase = {}, company = {}) {
 
 // Alias for receipt download
 export const generatePurchaseReceiptPDF = generatePurchaseInvoicePDF;
+
+/**
+ * Generate a Comprehensive Financial Performance & P&L Statement PDF
+ * Covering Sales, Purchases (COGS), Operating Expenses, Gross Profit, and Profit After Expense
+ * for any chosen timeline (Monthly, Quarterly, or Yearly).
+ *
+ * @param {Object} options
+ * @param {"monthly"|"quarterly"|"yearly"} [options.timelineType="monthly"]
+ * @param {string} options.periodLabel - Display label (e.g. "November 2026", "Q3 FY 2026-27", "FY 2026-27")
+ * @param {string} options.startDate - "YYYY-MM-DD"
+ * @param {string} options.endDate - "YYYY-MM-DD"
+ * @param {Array} options.invoices - Invoices dataset
+ * @param {Array} options.purchases - Purchases dataset
+ * @param {Array} options.expenses - Operating expenses dataset
+ * @param {Object} options.company - Company profile from database
+ * @returns {Object} { fileName, doc }
+ */
+export function generateFinancialReportPDF({
+  timelineType = "monthly",
+  periodLabel = "",
+  startDate = "",
+  endDate = "",
+  invoices = [],
+  purchases = [],
+  expenses = [],
+  company = {},
+}) {
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  // Safe text wrapper to prevent any "Invalid arguments passed to jsPDF.text"
+  const _origText = doc.text.bind(doc);
+  doc.text = function (text, x, y, options, transform) {
+    if (text === null || text === undefined) text = "";
+    else if (typeof text !== "string" && !Array.isArray(text)) text = String(text);
+    return _origText(text, x, y, options, transform);
+  };
+
+  const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2; // 182mm
+  const rightX = pageWidth - margin;
+
+  // Real company profile info strictly from database
+  const companyInfo = {
+    name: company.name || "Laxmi Enterprises",
+    tagline: company.tagline || "",
+    gstin: company.gstin || "",
+    pan: company.pan || "",
+    phone: company.phone || "",
+    email: company.email || "",
+    address: company.address || "",
+  };
+
+  // 1. Filter Records for Specified Timeline [startDate, endDate]
+  const periodInvoices = (invoices || []).filter((inv) => {
+    if (inv.isCancelled) return false;
+    const d = inv.invoiceDate || inv.date || (inv.createdAt ? String(inv.createdAt).slice(0, 10) : "");
+    return d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
+  });
+
+  const periodPurchases = (purchases || []).filter((p) => {
+    if (p.isCancelled || p.status === "Cancelled") return false;
+    const d = p.purchaseDate || p.date || (p.createdAt ? String(p.createdAt).slice(0, 10) : "");
+    return d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
+  });
+
+  const periodExpenses = (expenses || []).filter((e) => {
+    if (e.isCancelled) return false;
+    const d = e.expenseDate || e.date || (e.createdAt ? String(e.createdAt).slice(0, 10) : "");
+    return d && (!startDate || d >= startDate) && (!endDate || d <= endDate);
+  });
+
+  // 2. Financial Aggregations
+  const taxableSales = periodInvoices.reduce((s, inv) => s + Number(inv.taxableTotal ?? inv.amount ?? 0), 0);
+  const gstCollected = periodInvoices.reduce((s, inv) => s + Number(inv.gstTotal ?? inv.tax ?? 0), 0);
+  const grandSales = periodInvoices.reduce((s, inv) => s + Number(inv.grandTotal ?? inv.total ?? (Number(inv.taxableTotal ?? inv.amount ?? 0) + Number(inv.gstTotal ?? inv.tax ?? 0))), 0);
+  const salesCount = periodInvoices.length;
+
+  const taxablePurchases = periodPurchases.reduce((s, p) => s + Number(p.taxableTotal ?? p.subtotal ?? p.amount ?? 0), 0);
+  const gstPurchases = periodPurchases.reduce((s, p) => s + Number(p.gstTotal ?? p.tax ?? 0), 0);
+  const grandPurchases = periodPurchases.reduce((s, p) => s + Number(p.grandTotal ?? p.total ?? (Number(p.taxableTotal ?? p.subtotal ?? 0) + Number(p.gstTotal ?? p.tax ?? 0))), 0);
+  const purchasesCount = periodPurchases.length;
+
+  const totalExpenses = periodExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expensesCount = periodExpenses.length;
+
+  // Profit & Loss Key Performance Indicators
+  const grossProfit = taxableSales - taxablePurchases;
+  const grossMarginPct = taxableSales > 0 ? (grossProfit / taxableSales) * 100 : 0;
+  const profitAfterExpense = grossProfit - totalExpenses;
+  const netMarginPct = taxableSales > 0 ? (profitAfterExpense / taxableSales) * 100 : 0;
+  const netGstLiability = gstCollected - gstPurchases;
+
+  // 3. TOP BRAND HEADER ACCENT BAR (Royal Sapphire & Cyan)
+  doc.setFillColor(0, 91, 181); // #005bb5
+  doc.rect(0, 0, pageWidth, 8, "F");
+  doc.setFillColor(0, 180, 216); // #00b4d8
+  doc.rect(0, 8, pageWidth, 1.5, "F");
+
+  // 4. BRANDING & HEADER SECTION
+  const logoImg = company.logo || companyInfo.logo || LAXMI_LOGO_BASE64;
+  let textStartX = margin;
+  if (logoImg) {
+    try {
+      doc.addImage(logoImg, "PNG", margin, 12, 18, 18);
+      textStartX = margin + 22;
+    } catch (e) {
+      textStartX = margin;
+    }
+  }
+
+  let currentY = 17;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(0, 43, 92);
+  doc.text(companyInfo.name, textStartX, currentY);
+
+  currentY += 4.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(companyInfo.tagline, textStartX, currentY);
+
+  currentY += 4;
+  doc.setFontSize(7.5);
+  doc.text(companyInfo.address, textStartX, currentY, { maxWidth: 95 });
+
+  currentY += 6.5;
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(15, 23, 42);
+  doc.text(`GSTIN: ${companyInfo.gstin || "N/A"}  |  PAN: ${companyInfo.pan || "N/A"}`, textStartX, currentY);
+
+  currentY += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Phone: ${companyInfo.phone || "N/A"}  |  Email: ${companyInfo.email || "N/A"}`, textStartX, currentY);
+
+  // Right Header Badge: REPORT TITLE & PERIOD
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(0, 91, 181);
+  doc.text("FINANCIAL STATEMENT & P&L", rightX, 16, { align: "right" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 23, 42);
+  const typeLabel = timelineType === "monthly" ? "MONTHLY REPORT" : timelineType === "quarterly" ? "QUARTERLY REPORT" : "ANNUAL FISCAL REPORT";
+  doc.text(typeLabel, rightX, 21.5, { align: "right" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Timeline: ${periodLabel}`, rightX, 26, { align: "right" });
+  if (startDate && endDate) {
+    doc.text(`Period: ${startDate} to ${endDate}`, rightX, 30.5, { align: "right" });
+  }
+
+  const generatedDateStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Generated: ${generatedDateStr} IST`, rightX, 35, { align: "right" });
+
+  // Divider Line
+  currentY = 40;
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.5);
+  doc.line(margin, currentY, rightX, currentY);
+  currentY += 4;
+
+  // 5. EXECUTIVE FINANCIAL KPI CARDS (4-Column Snapshot)
+  const cardWidth = (contentWidth - 9) / 4; // 4 cards with 3mm gaps
+  const cardHeight = 22;
+
+  const kpis = [
+    {
+      title: "Gross Sales Turnover",
+      val: `Rs. ${taxableSales.toLocaleString("en-IN")}`,
+      sub: `Grand: Rs. ${grandSales.toLocaleString("en-IN")} (${salesCount} Invs)`,
+      bg: [239, 246, 255],
+      border: [191, 219, 254],
+      textCol: [0, 91, 181]
+    },
+    {
+      title: "Procurement / COGS",
+      val: `Rs. ${taxablePurchases.toLocaleString("en-IN")}`,
+      sub: `Grand: Rs. ${grandPurchases.toLocaleString("en-IN")} (${purchasesCount} POs)`,
+      bg: [240, 253, 244],
+      border: [187, 247, 208],
+      textCol: [22, 101, 52]
+    },
+    {
+      title: "Operating Expenses",
+      val: `Rs. ${totalExpenses.toLocaleString("en-IN")}`,
+      sub: `${expensesCount} expense records`,
+      bg: [254, 242, 242],
+      border: [254, 202, 202],
+      textCol: [185, 28, 28]
+    },
+    {
+      title: "Profit After Expense",
+      val: `Rs. ${profitAfterExpense.toLocaleString("en-IN")}`,
+      sub: `Net Margin: ${netMarginPct.toFixed(1)}% | GP: ${grossMarginPct.toFixed(1)}%`,
+      bg: profitAfterExpense >= 0 ? [240, 253, 250] : [255, 241, 242],
+      border: profitAfterExpense >= 0 ? [153, 246, 228] : [254, 205, 211],
+      textCol: profitAfterExpense >= 0 ? [15, 118, 110] : [190, 18, 60]
+    }
+  ];
+
+  kpis.forEach((kpi, idx) => {
+    const cardX = margin + idx * (cardWidth + 3);
+    doc.setFillColor(kpi.bg[0], kpi.bg[1], kpi.bg[2]);
+    doc.setDrawColor(kpi.border[0], kpi.border[1], kpi.border[2]);
+    doc.roundedRect(cardX, currentY, cardWidth, cardHeight, 1.5, 1.5, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(71, 85, 105);
+    doc.text(kpi.title, cardX + 2.5, currentY + 4.5);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(kpi.textCol[0], kpi.textCol[1], kpi.textCol[2]);
+    doc.text(kpi.val, cardX + 2.5, currentY + 11.5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.2);
+    doc.setTextColor(100, 116, 139);
+    doc.text(kpi.sub, cardX + 2.5, currentY + 17.5, { maxWidth: cardWidth - 5 });
+  });
+
+  currentY += cardHeight + 6;
+
+  // 6. EXECUTIVE PROFIT & LOSS RECONCILIATION STATEMENT TABLE
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 43, 92);
+  doc.text("1. Executive Profit & Loss (P&L) Statement", margin, currentY);
+  currentY += 2;
+
+  const plRows = [
+    [
+      "Gross Outward Turnover",
+      "Total taxable billing generated across all sales invoices",
+      `Rs. ${taxableSales.toLocaleString("en-IN")}`,
+      "100.0% of Revenue"
+    ],
+    [
+      "Cost of Goods Sold (Purchases)",
+      "Direct inward material procurement and inventory costs",
+      `(-) Rs. ${taxablePurchases.toLocaleString("en-IN")}`,
+      `${taxableSales > 0 ? ((taxablePurchases / taxableSales) * 100).toFixed(1) : 0}% COGS Ratio`
+    ],
+    [
+      "GROSS COMMERCIAL PROFIT",
+      "Commercial trading surplus before operational overheads",
+      `Rs. ${grossProfit.toLocaleString("en-IN")}`,
+      `${grossMarginPct.toFixed(1)}% Gross Margin`
+    ],
+    [
+      "Operating Expenses",
+      "Rent, salaries, power, logistics, administration & maintenance",
+      `(-) Rs. ${totalExpenses.toLocaleString("en-IN")}`,
+      `${taxableSales > 0 ? ((totalExpenses / taxableSales) * 100).toFixed(1) : 0}% Expense Ratio`
+    ],
+    [
+      "PROFIT AFTER EXPENSE (NET)",
+      "Bottom-line commercial earnings realized for the selected timeline",
+      `Rs. ${profitAfterExpense.toLocaleString("en-IN")}`,
+      `${netMarginPct.toFixed(1)}% Net Margin`
+    ],
+    [
+      "GST Output Tax Collected",
+      "Total CGST + SGST collected on sales invoices (Liability)",
+      `Rs. ${gstCollected.toLocaleString("en-IN")}`,
+      "Output Liability"
+    ],
+    [
+      "GST Input Tax Credit (ITC)",
+      "Total CGST + SGST paid on purchases/procurement (Credit)",
+      `Rs. ${gstPurchases.toLocaleString("en-IN")}`,
+      "Eligible ITC"
+    ],
+    [
+      "Net GST Balance Payable / (Credit)",
+      "Output GST collected minus Input Tax Credit eligible",
+      netGstLiability >= 0 ? `Rs. ${netGstLiability.toLocaleString("en-IN")}` : `Rs. 0 (ITC Surplus: Rs. ${Math.abs(netGstLiability).toLocaleString("en-IN")})`,
+      netGstLiability >= 0 ? "Tax Liability" : "ITC Carryforward"
+    ]
+  ];
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: margin, right: margin },
+    head: [["Financial Flow & Line Item", "Description & Commercial Scope", "Amount (INR)", "Margin / Indicator"]],
+    body: plRows,
+    theme: "striped",
+    headStyles: {
+      fillColor: [0, 91, 181],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 8,
+      cellPadding: 2.5
+    },
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 2.2,
+      textColor: [15, 23, 42],
+    },
+    columnStyles: {
+      0: { cellWidth: 48, fontStyle: "bold" },
+      1: { cellWidth: 72, textColor: [71, 85, 105] },
+      2: { cellWidth: 34, halign: "right", fontStyle: "bold" },
+      3: { cellWidth: 28, halign: "center", fontStyle: "bold", textColor: [0, 91, 181] }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+    didParseCell: (data) => {
+      // Highlight Key Profit Rows
+      if (data.row.index === 2) {
+        data.cell.styles.fillColor = [240, 253, 244];
+        data.cell.styles.textColor = [22, 101, 52];
+      }
+      if (data.row.index === 4) {
+        data.cell.styles.fillColor = profitAfterExpense >= 0 ? [236, 253, 245] : [254, 242, 242];
+        data.cell.styles.textColor = profitAfterExpense >= 0 ? [6, 95, 70] : [185, 28, 28];
+        data.cell.styles.fontStyle = "bold";
+      }
+    }
+  });
+
+  currentY = doc.lastAutoTable.finalY + 8;
+
+  // 7. SECTION 2: SALES INVOICES REGISTER
+  if (currentY > 230) {
+    doc.addPage();
+    currentY = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 43, 92);
+  doc.text(`2. Sales & Revenue Register (${salesCount} Invoices Recorded)`, margin, currentY);
+  currentY += 2;
+
+  const invoiceTableRows = periodInvoices.length > 0
+    ? periodInvoices.map((inv, idx) => [
+        idx + 1,
+        inv.invoiceNumber || inv.id || "N/A",
+        inv.invoiceDate || inv.date || "-",
+        (inv.clientName || "").slice(0, 24),
+        inv.category || "General",
+        inv.paymentMethod || inv.paymentMode || "Bank",
+        `Rs. ${Number(inv.taxableTotal ?? inv.amount ?? 0).toLocaleString("en-IN")}`,
+        `Rs. ${Number(inv.gstTotal ?? inv.tax ?? 0).toLocaleString("en-IN")}`,
+        `Rs. ${Number(inv.grandTotal ?? inv.total ?? 0).toLocaleString("en-IN")}`,
+        inv.status || "Paid"
+      ])
+    : [["-", "No sales invoices recorded for this period.", "-", "-", "-", "-", "Rs. 0", "Rs. 0", "Rs. 0", "-"]];
+
+  // Append Total Row if records exist
+  if (periodInvoices.length > 0) {
+    invoiceTableRows.push([
+      "",
+      "TOTAL SALES",
+      "",
+      "",
+      "",
+      "",
+      `Rs. ${taxableSales.toLocaleString("en-IN")}`,
+      `Rs. ${gstCollected.toLocaleString("en-IN")}`,
+      `Rs. ${grandSales.toLocaleString("en-IN")}`,
+      ""
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: margin, right: margin },
+    head: [["#", "Invoice #", "Date", "Client Name", "Category", "Payment", "Taxable (INR)", "GST (INR)", "Total (INR)", "Status"]],
+    body: invoiceTableRows,
+    theme: "striped",
+    headStyles: {
+      fillColor: [14, 116, 144], // Cyan navy #0e7490
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7.5,
+      cellPadding: 2
+    },
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.8,
+      textColor: [15, 23, 42]
+    },
+    columnStyles: {
+      0: { cellWidth: 7, halign: "center" },
+      1: { cellWidth: 25, fontStyle: "bold" },
+      2: { cellWidth: 17 },
+      3: { cellWidth: 31 },
+      4: { cellWidth: 17 },
+      5: { cellWidth: 15 },
+      6: { cellWidth: 20, halign: "right" },
+      7: { cellWidth: 16, halign: "right" },
+      8: { cellWidth: 22, halign: "right", fontStyle: "bold" },
+      9: { cellWidth: 12, halign: "center" }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    didParseCell: (data) => {
+      // Highlight Total Row
+      if (periodInvoices.length > 0 && data.row.index === invoiceTableRows.length - 1) {
+        data.cell.styles.fillColor = [224, 242, 254];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.textColor = [3, 105, 161];
+      }
+    }
+  });
+
+  currentY = doc.lastAutoTable.finalY + 8;
+
+  // 8. SECTION 3: PURCHASES & PROCUREMENT REGISTER
+  if (currentY > 230) {
+    doc.addPage();
+    currentY = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 43, 92);
+  doc.text(`3. Procurement & Purchase Register (${purchasesCount} Vouchers Recorded)`, margin, currentY);
+  currentY += 2;
+
+  const purchaseTableRows = periodPurchases.length > 0
+    ? periodPurchases.map((p, idx) => [
+        idx + 1,
+        p.purchaseId || p.billNumber || p.id || "N/A",
+        p.purchaseDate || p.date || "-",
+        (p.vendorName || p.supplierName || "").slice(0, 24),
+        p.category || "General",
+        p.paymentMethod || p.paymentMode || "Bank",
+        `Rs. ${Number(p.taxableTotal ?? p.subtotal ?? p.amount ?? 0).toLocaleString("en-IN")}`,
+        `Rs. ${Number(p.gstTotal ?? p.tax ?? 0).toLocaleString("en-IN")}`,
+        `Rs. ${Number(p.grandTotal ?? p.total ?? 0).toLocaleString("en-IN")}`,
+        p.status || "Received"
+      ])
+    : [["-", "No purchase vouchers recorded for this period.", "-", "-", "-", "-", "Rs. 0", "Rs. 0", "Rs. 0", "-"]];
+
+  if (periodPurchases.length > 0) {
+    purchaseTableRows.push([
+      "",
+      "TOTAL PURCHASES",
+      "",
+      "",
+      "",
+      "",
+      `Rs. ${taxablePurchases.toLocaleString("en-IN")}`,
+      `Rs. ${gstPurchases.toLocaleString("en-IN")}`,
+      `Rs. ${grandPurchases.toLocaleString("en-IN")}`,
+      ""
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: margin, right: margin },
+    head: [["#", "Purchase / Bill #", "Date", "Vendor Name", "Category", "Payment", "Taxable (INR)", "GST (INR)", "Total (INR)", "Status"]],
+    body: purchaseTableRows,
+    theme: "striped",
+    headStyles: {
+      fillColor: [5, 150, 105], // Emerald green #059669
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7.5,
+      cellPadding: 2
+    },
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.8,
+      textColor: [15, 23, 42]
+    },
+    columnStyles: {
+      0: { cellWidth: 7, halign: "center" },
+      1: { cellWidth: 25, fontStyle: "bold" },
+      2: { cellWidth: 17 },
+      3: { cellWidth: 31 },
+      4: { cellWidth: 17 },
+      5: { cellWidth: 15 },
+      6: { cellWidth: 20, halign: "right" },
+      7: { cellWidth: 16, halign: "right" },
+      8: { cellWidth: 22, halign: "right", fontStyle: "bold" },
+      9: { cellWidth: 12, halign: "center" }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    didParseCell: (data) => {
+      if (periodPurchases.length > 0 && data.row.index === purchaseTableRows.length - 1) {
+        data.cell.styles.fillColor = [209, 250, 229];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.textColor = [4, 120, 87];
+      }
+    }
+  });
+
+  currentY = doc.lastAutoTable.finalY + 8;
+
+  // 9. SECTION 4: OPERATING EXPENSES REGISTER
+  if (currentY > 230) {
+    doc.addPage();
+    currentY = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 43, 92);
+  doc.text(`4. Operational Expenses Register (${expensesCount} Entries Recorded)`, margin, currentY);
+  currentY += 2;
+
+  const expenseTableRows = periodExpenses.length > 0
+    ? periodExpenses.map((exp, idx) => [
+        idx + 1,
+        exp.expenseNumber || exp.id || "-",
+        exp.expenseDate || exp.date || "-",
+        exp.category || "General Operating",
+        (exp.description || exp.notes || "").slice(0, 36),
+        exp.paymentMode || exp.paymentMethod || "Bank",
+        `Rs. ${Number(exp.amount || 0).toLocaleString("en-IN")}`
+      ])
+    : [["-", "-", "No expenses recorded for this period.", "-", "-", "-", "Rs. 0"]];
+
+  if (periodExpenses.length > 0) {
+    expenseTableRows.push([
+      "",
+      "",
+      "TOTAL OPERATING EXPENSES",
+      "",
+      "",
+      "",
+      `Rs. ${totalExpenses.toLocaleString("en-IN")}`
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: currentY,
+    margin: { left: margin, right: margin },
+    head: [["#", "Expense #", "Date", "Category Head", "Description / Narration", "Payment Mode", "Amount (INR)"]],
+    body: expenseTableRows,
+    theme: "striped",
+    headStyles: {
+      fillColor: [225, 29, 72], // Rose #e11d48
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7.5,
+      cellPadding: 2
+    },
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.8,
+      textColor: [15, 23, 42]
+    },
+    columnStyles: {
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 26, fontStyle: "bold" },
+      2: { cellWidth: 18 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 50 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 28, halign: "right", fontStyle: "bold" }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    didParseCell: (data) => {
+      if (periodExpenses.length > 0 && data.row.index === expenseTableRows.length - 1) {
+        data.cell.styles.fillColor = [255, 228, 230];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.textColor = [190, 18, 60];
+      }
+    }
+  });
+
+  currentY = doc.lastAutoTable.finalY + 8;
+
+  // 10. SIGNATORY & CERTIFICATION BLOCK
+  if (currentY > 240) {
+    doc.addPage();
+    currentY = 20;
+  }
+
+  const signBoxY = currentY + 4;
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, signBoxY, contentWidth, 24, 1.5, 1.5, "FD");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text("Certification & Auditor Declaration:", margin + 4, signBoxY + 5.5);
+  doc.text(
+    "This financial performance report is automatically compiled from live GST invoices, vendor procurements, and operational expense ledgers recorded in Laxmi Enterprises ERP.",
+    margin + 4,
+    signBoxY + 10,
+    { maxWidth: 110 }
+  );
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(0, 43, 92);
+  doc.text(`For ${companyInfo.name}`, rightX - 4, signBoxY + 5.5, { align: "right" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text("Authorized Signatory / Financial Controller", rightX - 4, signBoxY + 20, { align: "right" });
+
+  // 11. MULTI-PAGE RUNNING FOOTERS & ACCENT BARS
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+
+    // Bottom running line
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 287, rightX, 287);
+
+    // Footer text
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Laxmi Enterprises Cloud ERP • Financial Statement (${periodLabel})`, margin, 291);
+    doc.text(`Page ${i} of ${totalPages}`, rightX, 291, { align: "right" });
+
+    // Bottom Accent Bar
+    doc.setFillColor(0, 91, 181);
+    doc.rect(0, 294, pageWidth, 3, "F");
+  }
+
+  // 12. SAVE & DOWNLOAD PDF
+  const cleanLabel = (periodLabel || timelineType).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `Financial_Report_${cleanLabel}.pdf`;
+
+  try {
+    if (typeof window !== "undefined" && window.FlutterDownloadBridge) {
+      try {
+        const dataUri = doc.output("datauristring");
+        window.FlutterDownloadBridge.postMessage(
+          JSON.stringify({
+            filename: fileName,
+            dataUrl: dataUri,
+          })
+        );
+        return { fileName, doc };
+      } catch (e) {
+        console.error("Flutter bridge error:", e);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        // Universal direct download trigger via Blob URL
+        const blob = doc.output("blob");
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = fileName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+      } catch (blobErr) {
+        if (typeof doc.save === "function") {
+          doc.save(fileName);
+        }
+      }
+    }
+  } catch (saveErr) {
+    console.warn("PDF download skipped:", saveErr.message);
+  }
+
+  return { fileName, doc };
+}
 

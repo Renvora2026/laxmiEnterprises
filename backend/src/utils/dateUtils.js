@@ -74,7 +74,8 @@ export function getMonthBoundsUTC(year, month1Based) {
  * @param {string} fyStr e.g. "2026-27"
  */
 export function getFiscalYearBoundsUTC(fyStr) {
-  const startYear = parseInt(fyStr.split("-")[0], 10);
+  const cleanFy = String(fyStr || "").replace(/^FY\s*/i, "").trim();
+  const startYear = parseInt(cleanFy.split("-")[0], 10);
   const istStart = new Date(Date.UTC(startYear, 3, 1, 0, 0, 0, 0) - IST_OFFSET_MS);
   const istEnd = new Date(Date.UTC(startYear + 1, 2, 31, 23, 59, 59, 999) - IST_OFFSET_MS);
   return { startUTC: istStart, endUTC: istEnd, startYear, endYear: startYear + 1 };
@@ -86,7 +87,8 @@ export function getFiscalYearBoundsUTC(fyStr) {
  * @param {string} quarter "Q1" | "Q2" | "Q3" | "Q4"
  */
 export function getQuarterBoundsUTC(fyStr, quarter) {
-  const startYear = parseInt(fyStr.split("-")[0], 10);
+  const cleanFy = String(fyStr || "").replace(/^FY\s*/i, "").trim();
+  const startYear = parseInt(cleanFy.split("-")[0], 10);
   let startMonth, endMonth, endDay, qYear;
 
   switch (quarter) {

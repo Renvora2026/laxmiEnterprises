@@ -25,35 +25,35 @@ Company.init(
     },
     tagline: {
       type: DataTypes.STRING(255),
-      defaultValue: "Industrial Supplies, Hardware, Agro Supplies & Trading Portal",
+      defaultValue: "",
     },
     address: {
       type: DataTypes.TEXT,
-      defaultValue: "Indapur Road, Baramati, Dist. Pune, Maharashtra",
+      defaultValue: "",
     },
     gstin: {
       type: DataTypes.STRING(30),
-      defaultValue: "27AAACL1234F1Z5",
+      defaultValue: "",
     },
     pan: {
       type: DataTypes.STRING(20),
-      defaultValue: "AAACL1234F",
+      defaultValue: "",
     },
     phone: {
       type: DataTypes.STRING(30),
-      defaultValue: "+91 98220 12345",
+      defaultValue: "",
     },
     email: {
       type: DataTypes.STRING(150),
-      defaultValue: "contact@laxmienterprises.com",
+      defaultValue: "",
     },
     currency: {
       type: DataTypes.STRING(20),
-      defaultValue: "INR (₹)",
+      defaultValue: "",
     },
     financialYear: {
       type: DataTypes.STRING(30),
-      defaultValue: "FY 2026-27",
+      defaultValue: "",
     },
     bankDetails: {
       type: DataTypes.JSON,

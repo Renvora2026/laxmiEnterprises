@@ -131,7 +131,7 @@ export default function Layout({
             {onRefreshAll && (
               <button
                 type="button"
-                className="icon-btn desktop-only"
+                className="icon-btn"
                 onClick={handleGlobalRefresh}
                 title="Sync & refresh all data with database"
                 style={{ cursor: "pointer" }}

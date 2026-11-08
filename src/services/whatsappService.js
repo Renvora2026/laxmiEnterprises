@@ -81,7 +81,7 @@ export function renderWhatsAppMessage(templateText, lead = {}, company = {}) {
   const remark = lead.remark || lead.note || "General Inquiry";
   const expoName = lead.expoName || "Agri Expo 2026";
   const companyName = company.name || "Laxmi Enterprises";
-  const companyPhone = company.phone || "+91 98765 43210";
+  const companyPhone = company.phone || "";
   const date = lead.date || new Date().toISOString().slice(0, 10);
 
   return templateText
@@ -192,7 +192,7 @@ export function renderPurchaseWhatsAppMessage(purchase = {}, company = {}, custo
 
   const vendorName = purchase.vendorName || purchase.name || "Vendor";
   const companyName = company.name || "Laxmi Enterprises";
-  const companyPhone = company.phone || "+91 98765 43210";
+  const companyPhone = company.phone || "";
   const id = purchase.id || "-";
   const billNumber = purchase.billNumber || "-";
   const date = purchase.date || new Date().toISOString().slice(0, 10);

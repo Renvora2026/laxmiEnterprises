@@ -127,7 +127,7 @@ export const getAllData = asyncHandler(async (req, res) => {
               stock: balance,
               minStockAlert: Number(p.reorderLevel || 10),
               reorderLevel: p.reorderLevel !== null && p.reorderLevel !== undefined ? Number(p.reorderLevel) : null,
-              warehouseLocation: p.warehouseLocation || "Main Warehouse",
+              warehouseLocation: p.warehouseLocation,
               status: evaluateStockHealth(balance, p.reorderLevel),
             };
           }),

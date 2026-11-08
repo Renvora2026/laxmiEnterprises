@@ -22,8 +22,35 @@ export async function getRevenueSummary(range = "fy", asOfDate = getToday()) {
     order: [["invoiceDate", "ASC"]],
   });
 
-  // Group by month in IST (YYYY-MM)
+  // Group by month in IST (YYYY-MM). If bounded to a fiscal year, pre-populate all 12 months in fiscal order.
   const monthlyMap = {};
+  if (!isAllTime && startDate && endDate) {
+    const startY = parseInt(startDate.slice(0, 4), 10);
+    const endY = parseInt(endDate.slice(0, 4), 10);
+    if (endY === startY + 1) {
+      const fyMonths = [
+        { y: startY, m: 4 }, { y: startY, m: 5 }, { y: startY, m: 6 },
+        { y: startY, m: 7 }, { y: startY, m: 8 }, { y: startY, m: 9 },
+        { y: startY, m: 10 }, { y: startY, m: 11 }, { y: startY, m: 12 },
+        { y: endY, m: 1 }, { y: endY, m: 2 }, { y: endY, m: 3 },
+      ];
+      for (const { y, m } of fyMonths) {
+        const ym = `${y}-${String(m).padStart(2, "0")}`;
+        const mName = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-US", { month: "short" });
+        monthlyMap[ym] = {
+          month: ym,
+          monthName: `${mName} ${y}`,
+          turnover: 0,
+          gstCollected: 0,
+          grossInvoiced: 0,
+          totalCost: 0,
+          invoiceCount: 0,
+          expenses: 0,
+        };
+      }
+    }
+  }
+
   for (const inv of invoices) {
     const dStr = inv.invoiceDate || (inv.createdAt ? inv.createdAt.toISOString().slice(0, 10) : "");
     if (!dStr) continue;
@@ -214,7 +241,8 @@ export async function getCategoryTurnover(range = "fy", asOfDate = getToday()) {
  */
 export async function getQuarterlyBreakdown(targetFY = null, asOfDate = getToday()) {
   const asOfStr = formatISTDateString(asOfDate);
-  const fy = targetFY || getFiscalYear(asOfStr);
+  const rawFY = targetFY || getFiscalYear(asOfStr);
+  const fy = String(rawFY).replace(/^FY\s*/i, "").trim();
   const startYear = parseInt(fy.split("-")[0], 10);
 
   const quarters = [
@@ -224,9 +252,14 @@ export async function getQuarterlyBreakdown(targetFY = null, asOfDate = getToday
     { q: "Q4", label: "Q4 (Jan - Mar)", start: `${startYear + 1}-01-01`, end: `${startYear + 1}-03-31` },
   ];
 
-  // Fetch targets from targets table
+  // Fetch targets from targets table (match either raw or cleaned fiscalYear)
   const dbTargets = await Target.findAll({
-    where: { fiscalYear: fy },
+    where: {
+      [Op.or]: [
+        { fiscalYear: fy },
+        { fiscalYear: `FY ${fy}` },
+      ],
+    },
   });
   const targetMap = new Map(dbTargets.map((t) => [t.quarter, Number(t.targetAmount || 0)]));
 
@@ -278,7 +311,10 @@ export async function getQuarterlyBreakdown(targetFY = null, asOfDate = getToday
       endDate: qDef.end,
       targetAmount: targetAmt,
       turnover,
+      actualRevenue: turnover,
+      grossMarginPct: null,
       achievedPct: achPct !== null ? Math.round(achPct * 10) / 10 : null,
+      progressPercent: achPct !== null ? Math.round(achPct * 10) / 10 : 0,
       status,
     });
   }

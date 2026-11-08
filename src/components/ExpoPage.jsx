@@ -603,6 +603,8 @@ export default function ExpoPage({
         company={company}
         showToast={showToast}
         onSent={handleBroadcastLogged}
+        activeExpoName={eventFilter !== "All" ? eventFilter : ""}
+        activeSectorFilter={sectorFilter !== "All" ? sectorFilter : ""}
       />
 
       <ExpoLeadViewModal

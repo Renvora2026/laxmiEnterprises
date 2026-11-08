@@ -307,7 +307,7 @@ export default function ClientsPage({
             })}
           </div>
 
-          <label className="cl-select desktop-only">
+          <label className="cl-select">
             <span>Status</span>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               {STATUS_OPTIONS.map(st => (
@@ -318,7 +318,7 @@ export default function ClientsPage({
             </select>
           </label>
 
-          <label className="cl-select desktop-only">
+          <label className="cl-select">
             <span>Tier</span>
             <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)}>
               {TIER_OPTIONS.map(t => (

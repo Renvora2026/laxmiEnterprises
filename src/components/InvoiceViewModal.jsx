@@ -41,9 +41,14 @@ export default function InvoiceViewModal({
     tagline: company.tagline || "",
     gstin: company.gstin || "",
     pan: company.pan || "",
-    phone: company.phone || "+91 99210 63187",
-    email: company.email || "laxmigroup616@gmail.com",
-    address: company.address || "Zalta, Zalta fata Main Road , Chikalthana, Chh. Shambhajnagar - 431007, Maharashtra, India"
+    phone: company.phone || "",
+    email: company.email || "",
+    address: company.address || "",
+    bankName: company.bankName || "",
+    bankBranch: company.bankBranch || "",
+    accountNumber: company.accountNumber || "",
+    ifscCode: company.ifscCode || "",
+    accountName: company.accountName || ""
   };
 
   const amount = Number(invoice.amount ?? invoice.taxableTotal ?? invoice.subtotal ?? 0);
@@ -356,9 +361,13 @@ export default function InvoiceViewModal({
                     {companyInfo.pan ? <span>PAN: <strong>{companyInfo.pan}</strong></span> : null}
                   </div>
                 )}
-                <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 4 }}>
-                  <span>Tel: {companyInfo.phone}</span> • <span>Email: {companyInfo.email}</span>
-                </div>
+                {(companyInfo.phone || companyInfo.email) && (
+                  <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 4 }}>
+                    {companyInfo.phone && <span>Tel: {companyInfo.phone}</span>}
+                    {companyInfo.phone && companyInfo.email && " • "}
+                    {companyInfo.email && <span>Email: {companyInfo.email}</span>}
+                  </div>
+                )}
               </div>
 
               {/* Right Side: Tax Invoice badge */}
@@ -421,8 +430,8 @@ export default function InvoiceViewModal({
                   Billed By (Supplier)
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{companyInfo.name}</div>
-                <div style={{ fontSize: 11.5, color: "#475569", marginTop: 4 }}>Industrial Estate, Pune - 411038</div>
-                <div style={{ fontSize: 11.5, color: "#475569", marginTop: 2 }}>State: Maharashtra (State Code: 27)</div>
+                {companyInfo.address && <div style={{ fontSize: 11.5, color: "#475569", marginTop: 4 }}>{companyInfo.address}</div>}
+                {companyInfo.gstin && <div style={{ fontSize: 11.5, color: "#475569", marginTop: 2 }}>GSTIN: <strong>{companyInfo.gstin}</strong></div>}
                 <div style={{ fontSize: 11.5, color: "#475569", marginTop: 2 }}>Place of Supply: Maharashtra (27)</div>
               </div>
 
@@ -534,17 +543,25 @@ export default function InvoiceViewModal({
                   </div>
                 </div>
 
-                <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 6, border: "1px solid #e2e8f0", marginTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#002b5c", marginBottom: 6 }}>
-                    Bank Remittance Account Details (NEFT / RTGS / IMPS)
+                {(companyInfo.bankName || companyInfo.accountNumber) ? (
+                  <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 6, border: "1px solid #e2e8f0", marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#002b5c", marginBottom: 6 }}>
+                      Bank Remittance Account Details (NEFT / RTGS / IMPS)
+                    </div>
+                    <div style={{ fontSize: 11.5, color: "#334155", lineHeight: 1.6 }}>
+                      {companyInfo.bankName && <div>Bank Name: <strong>{companyInfo.bankName}</strong></div>}
+                      {companyInfo.accountName && <div>Account Name: <strong>{companyInfo.accountName}</strong></div>}
+                      {companyInfo.accountNumber && <div>Account Number: <strong style={{ fontFamily: "monospace" }}>{companyInfo.accountNumber}</strong></div>}
+                      {(companyInfo.ifscCode || companyInfo.bankBranch) && (
+                        <div>
+                          {companyInfo.ifscCode && <>IFSC Code: <strong style={{ fontFamily: "monospace" }}>{companyInfo.ifscCode}</strong></>}
+                          {companyInfo.ifscCode && companyInfo.bankBranch && " • "}
+                          {companyInfo.bankBranch && <>Branch: {companyInfo.bankBranch}</>}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#334155", lineHeight: 1.6 }}>
-                    <div>Bank Name: <strong>State Bank of India (SBI)</strong></div>
-                    <div>Account Name: <strong>Laxmi Enterprises Commercial</strong></div>
-                    <div>Account Number: <strong style={{ fontFamily: "monospace" }}>398201554902</strong></div>
-                    <div>IFSC Code: <strong style={{ fontFamily: "monospace" }}>SBIN0001245</strong> • Branch: Pune Industrial</div>
-                  </div>
-                </div>
+                ) : null}
               </div>
 
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, padding: "14px 16px" }}>
@@ -673,7 +690,7 @@ export default function InvoiceViewModal({
                 <strong style={{ color: "#334155" }}>Terms & Conditions:</strong>
                 <div>1. Goods once inspected cannot be returned without prior authorization.</div>
                 <div>2. Payment is due within agreed terms. Delayed payments attract interest @ 18% p.a.</div>
-                <div>3. All disputes subject to Pune, Maharashtra jurisdiction.</div>
+                <div>3. All disputes subject to local jurisdiction.</div>
               </div>
 
               <div style={{ textAlign: "center" }}>
@@ -896,9 +913,29 @@ export default function InvoiceViewModal({
                 </div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
                   <div><b>{companyInfo.name}</b></div>
-                  <div>GSTIN: <b>{companyInfo.gstin}</b> • PAN: <b>{companyInfo.pan}</b></div>
-                  <div>Bank: <b>SBI</b> • A/C: <b>398201554902</b></div>
-                  <div>IFSC: <b>SBIN0004249</b> (Industrial Estate, Pune)</div>
+                  {companyInfo.address && <div>{companyInfo.address}</div>}
+                  {(companyInfo.gstin || companyInfo.pan) && (
+                    <div>
+                      {companyInfo.gstin && <>GSTIN: <b>{companyInfo.gstin}</b></>}
+                      {companyInfo.gstin && companyInfo.pan && " • "}
+                      {companyInfo.pan && <>PAN: <b>{companyInfo.pan}</b></>}
+                    </div>
+                  )}
+                  {(companyInfo.phone || companyInfo.email) && (
+                    <div>
+                      {companyInfo.phone && <>Tel: <b>{companyInfo.phone}</b></>}
+                      {companyInfo.phone && companyInfo.email && " • "}
+                      {companyInfo.email && <>Email: <b>{companyInfo.email}</b></>}
+                    </div>
+                  )}
+                  {(companyInfo.bankName || companyInfo.accountNumber) && (
+                    <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px dashed var(--border)" }}>
+                      {companyInfo.bankName && <div>Bank: <b>{companyInfo.bankName}</b></div>}
+                      {companyInfo.accountName && <div>A/C Name: <b>{companyInfo.accountName}</b></div>}
+                      {companyInfo.accountNumber && <div>A/C No: <b style={{ fontFamily: "monospace" }}>{companyInfo.accountNumber}</b></div>}
+                      {companyInfo.ifscCode && <div>IFSC: <b style={{ fontFamily: "monospace" }}>{companyInfo.ifscCode}</b> {companyInfo.bankBranch ? `(${companyInfo.bankBranch})` : ""}</div>}
+                    </div>
+                  )}
                 </div>
               </div>
             </>
